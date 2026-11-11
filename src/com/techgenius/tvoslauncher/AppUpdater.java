@@ -31,14 +31,14 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Checks GitHub Releases (https://api.github.com/repos/techgenius1/tvOS-Launcher/releases/latest)
+ * Checks GitHub Releases (https://api.github.com/repos/lemilleur/tvOS-Launcher/releases/latest)
  * and downloads/installs the latest APK either automatically or manually from Settings -> Updates.
  */
 public final class AppUpdater {
     public static final String GITHUB_API_LATEST =
-            "https://api.github.com/repos/techgenius1/tvOS-Launcher/releases/latest";
+            "https://api.github.com/repos/lemilleur/tvOS-Launcher/releases/latest";
     public static final String GITHUB_FALLBACK_APK =
-            "https://github.com/techgenius1/tvOS-Launcher/releases/latest/download/tvos-home.apk";
+            "https://github.com/lemilleur/tvOS-Launcher/releases/latest/download/tvos-home.apk";
 
     private static final String PREF_NAME = "updates";
     private static final String KEY_AUTO_UPDATE = "auto_update";
@@ -71,7 +71,7 @@ public final class AppUpdater {
     }
 
     public static String getCurrentVersion(Context c) {
-        if (c == null) return "2.1.5";
+        if (c == null) return "2.1.6";
         try {
             PackageInfo pi = c.getPackageManager().getPackageInfo(c.getPackageName(), 0);
             if (pi != null && pi.versionName != null && !pi.versionName.isEmpty()) {
@@ -79,7 +79,7 @@ public final class AppUpdater {
             }
         } catch (Throwable ignored) {
         }
-        return "2.1.5";
+        return "2.1.6";
     }
 
     public static String getCachedLatestVersion(Context c) {
@@ -252,7 +252,7 @@ public final class AppUpdater {
             if (activity.isFinishing()) return;
             if (!success) {
                 Toast.makeText(activity,
-                        I18n.s(activity, "Could not check for updates.", "Güncellemeler kontrol edilemedi."),
+                        I18n.t(activity, "Could not check for updates."),
                         Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -266,9 +266,7 @@ public final class AppUpdater {
                         onUiRefresh);
             } else {
                 Toast.makeText(activity,
-                        I18n.s(activity,
-                                "You are up to date (v" + cur + ")",
-                                "Sürümünüz güncel (v" + cur + ")"),
+                        (I18n.t(activity, "You are up to date (v") + cur + ")"),
                         Toast.LENGTH_SHORT).show();
             }
         });
@@ -319,7 +317,7 @@ public final class AppUpdater {
         card.setBackground(cardBg);
 
         android.widget.TextView titleTv = new android.widget.TextView(activity);
-        titleTv.setText(I18n.s(activity, "Update Available", "Güncelleme Mevcut") + " — v" + latestVersion);
+        titleTv.setText(I18n.t(activity, "Update Available") + " — v" + latestVersion);
         titleTv.setTextColor(0xFFFFFFFF);
         titleTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
         titleTv.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
@@ -327,18 +325,10 @@ public final class AppUpdater {
 
         android.widget.TextView msgTv = new android.widget.TextView(activity);
         String modeNote = adbOn
-                ? I18n.s(activity,
-                        "ADB is active — selecting Install will download and install the update automatically.",
-                        "ADB aktif — Yükle'yi seçtiğinizde güncelleme otomatik olarak indirilip kurulacaktır.")
-                : I18n.s(activity,
-                        "ADB is turned off (Secure Mode) — selecting Install will download the update and open the system package installer.",
-                        "ADB kapalı (Güvenli Mod) — Yükle'yi seçtiğinizde güncelleme indirilecek ve sistem paket yükleyicisi açılacaktır.");
-        msgTv.setText(I18n.s(activity,
-                "A new version of tvOS Launcher is available on GitHub.\n"
-                        + "Current version: v" + cur + "  →  New version: v" + latestVersion + "\n\n"
-                        + modeNote,
-                "GitHub'da yeni bir tvOS Launcher sürümü mevcut.\n"
-                        + "Mevcut sürüm: v" + cur + "  →  Yeni sürüm: v" + latestVersion + "\n\n"
+                ? I18n.t(activity, "ADB is active — selecting Install will download and install the update automatically.")
+                : I18n.t(activity, "ADB is turned off (Secure Mode) — selecting Install will download the update and open the system package installer.");
+        msgTv.setText((I18n.t(activity, "A new version of tvOS Launcher is available on GitHub.\n")
+                        + I18n.t(activity, "Current version: v") + cur + I18n.t(activity, "  →  New version: v") + latestVersion + "\n\n"
                         + modeNote));
         msgTv.setTextColor(0xCCFFFFFF);
         msgTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
@@ -358,7 +348,7 @@ public final class AppUpdater {
         // Button 1: Show Changelog
         android.widget.TextView changelogBtn = createDialogActionButton(
                 activity,
-                I18n.s(activity, "Show Changelog", "Değişiklik Günlüğü"),
+                I18n.t(activity, "Show Changelog"),
                 false,
                 () -> {
                     dlg.dismiss();
@@ -373,7 +363,7 @@ public final class AppUpdater {
         // Button 2: Install (Default Selected / Focused)
         android.widget.TextView installBtn = createDialogActionButton(
                 activity,
-                I18n.s(activity, "Install", "Yükle"),
+                I18n.t(activity, "Install"),
                 true,
                 () -> {
                     dlg.dismiss();
@@ -428,7 +418,7 @@ public final class AppUpdater {
         card.setBackground(cardBg);
 
         android.widget.TextView titleTv = new android.widget.TextView(activity);
-        titleTv.setText(I18n.s(activity, "Changelog — v" + latestVersion, "Değişiklik Günlüğü — v" + latestVersion));
+        titleTv.setText((I18n.t(activity, "Changelog — v") + latestVersion));
         titleTv.setTextColor(0xFFFFFFFF);
         titleTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 19);
         titleTv.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
@@ -439,9 +429,7 @@ public final class AppUpdater {
         android.widget.TextView bodyTv = new android.widget.TextView(activity);
         String bodyText = (changelog != null && !changelog.trim().isEmpty())
                 ? changelog.trim()
-                : I18n.s(activity,
-                        "No changelog text provided for this release.",
-                        "Bu sürüm için değişiklik günlüğü metni bulunamadı.");
+                : I18n.t(activity, "No changelog text provided for this release.");
         bodyTv.setText(bodyText);
         bodyTv.setTextColor(0xDDFFFFFF);
         bodyTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
@@ -469,7 +457,7 @@ public final class AppUpdater {
 
         android.widget.TextView backBtn = createDialogActionButton(
                 activity,
-                I18n.s(activity, "Back", "Geri"),
+                I18n.t(activity, "Back"),
                 false,
                 () -> {
                     dlg.dismiss();
@@ -483,7 +471,7 @@ public final class AppUpdater {
 
         android.widget.TextView installBtn = createDialogActionButton(
                 activity,
-                I18n.s(activity, "Install", "Yükle"),
+                I18n.t(activity, "Install"),
                 true,
                 () -> {
                     dlg.dismiss();
@@ -558,7 +546,7 @@ public final class AppUpdater {
         final Context appCtx = activity.getApplicationContext();
 
         Toast.makeText(activity,
-                I18n.s(activity, "Downloading update v" + version + "…", "Güncelleme indiriliyor v" + version + "…"),
+                (I18n.t(activity, "Downloading update v") + version + "…"),
                 Toast.LENGTH_SHORT).show();
 
         new Thread(() -> {
@@ -611,9 +599,7 @@ public final class AppUpdater {
                 // 1. If ADB is currently active (port 5555 open), install automatically via LocalAdb
                 if (LocalAdb.isAdbPortCurrentlyOpen()) {
                     MAIN.post(() -> Toast.makeText(appCtx,
-                            I18n.s(appCtx,
-                                    "Installing update v" + version + " automatically via ADB…",
-                                    "v" + version + " güncellemesi ADB ile otomatik kuruluyor…"),
+                            (I18n.t(appCtx, "Installing update v") + version + I18n.t(appCtx, " automatically via ADB…")),
                             Toast.LENGTH_LONG).show());
                     if (LocalAdb.installApkViaAdb(appCtx, apkFile)) {
                         downloading = false;
@@ -621,9 +607,7 @@ public final class AppUpdater {
                         return;
                     }
                     MAIN.post(() -> Toast.makeText(appCtx,
-                            I18n.s(appCtx,
-                                    "ADB install failed, opening package installer…",
-                                    "ADB kurulumu başarısız, paket yükleyici açılıyor…"),
+                            I18n.t(appCtx, "ADB install failed, opening package installer…"),
                             Toast.LENGTH_SHORT).show());
                 }
 
@@ -635,7 +619,7 @@ public final class AppUpdater {
                 downloading = false;
                 if (onUiRefresh != null) MAIN.post(onUiRefresh);
                 MAIN.post(() -> Toast.makeText(appCtx,
-                        I18n.s(appCtx, "Update download failed.", "Güncelleme indirilemedi."),
+                        I18n.t(appCtx, "Update download failed."),
                         Toast.LENGTH_SHORT).show());
             } finally {
                 if (conn != null) conn.disconnect();
@@ -660,8 +644,7 @@ public final class AppUpdater {
         try {
             if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
                 Toast.makeText(activity,
-                        I18n.s(activity, "Please allow 'Install unknown apps' for tvOS Launcher.",
-                                "Lütfen tvOS Launcher için 'Bilinmeyen uygulamaları yükle' iznini verin."),
+                        I18n.t(activity, "Please allow 'Install unknown apps' for tvOS Launcher."),
                         Toast.LENGTH_LONG).show();
                 try {
                     Intent permIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -697,7 +680,7 @@ public final class AppUpdater {
             }
         } catch (Throwable t) {
             Toast.makeText(activity,
-                    I18n.s(activity, "Could not start installer.", "Yükleyici başlatılamadı."),
+                    I18n.t(activity, "Could not start installer."),
                     Toast.LENGTH_SHORT).show();
         }
     }
@@ -721,7 +704,7 @@ public final class AppUpdater {
                 }
             } else if (status == PackageInstaller.STATUS_SUCCESS) {
                 Toast.makeText(context,
-                        I18n.s(context, "Update installed!", "Güncelleme yüklendi!"),
+                        I18n.t(context, "Update installed!"),
                         Toast.LENGTH_SHORT).show();
             }
         }

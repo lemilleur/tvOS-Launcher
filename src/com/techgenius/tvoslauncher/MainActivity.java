@@ -89,7 +89,6 @@ public class MainActivity extends Activity {
             "com.netflix.ninja",
             "com.amazon.amazonvideo.livingroom",
             "org.smarttube.stable",
-            "in.startv.hotstar",
             "com.apple.atve.androidtv.appletv",
             "com.spotify.tv.android",
             "com.mitv.tvhome.mitvplus",
@@ -247,10 +246,6 @@ public class MainActivity extends Activity {
         // (this Mali-450 GPU is fill-rate bound, so every hidden full-screen layer costs frames).
         getWindow().setBackgroundDrawable(null);
         prefs = Profiles.homePrefs(this);
-        String initLang = getIntent() != null ? getIntent().getStringExtra("lang") : null;
-        if (initLang != null && !initLang.isEmpty()) {
-            I18n.setLang(this, initLang);
-        }
         focusedIndex = Math.max(0, prefs.getInt("last_classic_idx", 0));
         activeLang = I18n.getLang(this);
         activeLook = Scenes.getLook(this);
@@ -324,13 +319,6 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         if (intent.hasExtra("dock_scale")) {
             Scenes.setDockScalePercent(this, intent.getIntExtra("dock_scale", 100));
-        }
-        String lang = intent.getStringExtra("lang");
-        if (lang != null && !lang.isEmpty()) {
-            I18n.setLang(this, lang);
-            activeLang = I18n.getLang(this);
-            recreate();
-            return;
         }
         if (intent.getBooleanExtra("pick_profile", false)) {
             closeMenu();
@@ -491,10 +479,10 @@ public class MainActivity extends Activity {
         if (SetupActivity.done(this) && !Perms.isDefaultHome(this) && !prefs.getBoolean("asked_default_home", false)) {
             prefs.edit().putBoolean("asked_default_home", true).apply();
             new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(I18n.s(this, "Make tvOS Launcher your home screen?", "tvOS Launcher ana ekranınız yapılsın mı?"))
-                    .setMessage(I18n.s(this, "The Home button on the remote will open tvOS Launcher.", "Kumandadaki Ana Ekran düğmesi tvOS Launcher'ı açacaktır."))
-                    .setPositiveButton(I18n.s(this, "Make Home Screen", "Ana Ekran Yap"), (d, w) -> Perms.requestDefaultHome(this))
-                    .setNegativeButton(I18n.s(this, "Not Now", "Şimdi Değil"), null).show();
+                    .setTitle(I18n.t(this, "Make tvOS Launcher your home screen?"))
+                    .setMessage(I18n.t(this, "The Home button on the remote will open tvOS Launcher."))
+                    .setPositiveButton(I18n.t(this, "Make Home Screen"), (d, w) -> Perms.requestDefaultHome(this))
+                    .setNegativeButton(I18n.t(this, "Not Now"), null).show();
         }
         handler.removeCallbacks(weatherTick);
         handler.post(weatherTick);
@@ -1022,8 +1010,8 @@ public class MainActivity extends Activity {
         // Like tvOS, the home grid has no big title; only the folder gets a header.
         titleBox.setVisibility(folderMode ? View.VISIBLE : View.GONE);
         chevron.setVisibility(folderMode ? View.GONE : View.VISIBLE);
-        shelfTitle.setText(I18n.s(this, "Other Apps", "Diğer Uygulamalar"));
-        shelfHint.setText(I18n.s(this, "Back to return   \u00b7   Hold OK for options", "Dönmek için Geri   \u00b7   Seçenekler için OK'e basılı tutun"));
+        shelfTitle.setText(I18n.t(this, "Other Apps"));
+        shelfHint.setText(I18n.t(this, "Back to return   \u00b7   Hold OK for options"));
 
         // Removing the focused card would make Android hand focus to the first card (and scroll
         // to the top); block that while rebuilding \u2014 callers focus the right card afterwards.
@@ -1208,17 +1196,13 @@ public class MainActivity extends Activity {
         "aurora", "midnight", "sunset", "ocean", "graphite"
     };
     static final String[] WALL_NAMES = {
-        "Tessellated Pavement", "Grose Valley", "Albury Storm", "Aresquiers Beach", "Vang Vieng Sunset",
-        "Aurora", "Midnight", "Sunset", "Ocean", "Graphite"
-    };
-    static final String[] WALL_NAMES_TR = {
-        "Tessellated Pavement", "Grose Vadisi", "Albury F\u0131rt\u0131nas\u0131", "Aresquiers Plaj\u0131", "Vang Vieng G\u00fcn Bat\u0131m\u0131",
-        "Kuzey I\u015f\u0131klar\u0131", "Gece Yar\u0131s\u0131", "G\u00fcn Bat\u0131m\u0131", "Okyanus", "Grafit"
+        "Мозаичный берег", "Долина Гроз", "Гроза в Олбери", "Пляж Арекьер", "Закат в Ванг-Вьенге",
+        "Северное сияние", "Полночь", "Закат", "Океан", "Графит"
     };
 
     static String wallName(Context c, int i) {
         if (i < 0 || i >= WALL_NAMES.length) return "";
-        return I18n.isTr(c) ? WALL_NAMES_TR[i] : WALL_NAMES[i];
+        return WALL_NAMES[i];
     }
 
     static final String CUSTOM_WALL_KEY = "custom";
@@ -1227,14 +1211,14 @@ public class MainActivity extends Activity {
     Bitmap makeWallpaper(String style) {
         if (CustomMedia.isCustomWallpaperEnabled(this, CustomMedia.SCOPE_CLASSIC)) {
             int subMode = CustomMedia.getCustomWallpaperSubMode(this, CustomMedia.SCOPE_CLASSIC);
-            if (subMode == CustomMedia.CUSTOM_MODE_REDDIT || Scenes.REDDIT_WALLPAPER_ID.equals(style)) {
-                Bitmap rb = CustomMedia.getRedditWallpaperBitmap(this, CustomMedia.SCOPE_CLASSIC, 1920, 1080);
+            if (subMode == CustomMedia.CUSTOM_MODE_ONLINE || Scenes.ONLINE_WALLPAPER_ID.equals(style)) {
+                Bitmap rb = CustomMedia.getOnlineWallpaperBitmap(this, CustomMedia.SCOPE_CLASSIC, 1920, 1080);
                 if (rb != null && !rb.isRecycled()) {
                     Bitmap copy = rb.copy(Bitmap.Config.ARGB_8888, true);
                     if (copy != rb) rb.recycle();
                     return bakeShade(copy);
                 } else {
-                    CustomMedia.fetchNextRedditWallpaperAsync(this, CustomMedia.SCOPE_CLASSIC, () -> {
+                    CustomMedia.fetchNextOnlineWallpaperAsync(this, CustomMedia.SCOPE_CLASSIC, () -> {
                         if (!Scenes.isScenesLook(this)) setWallpaper(wallStyle);
                     });
                 }
@@ -1916,7 +1900,7 @@ public class MainActivity extends Activity {
         btnRow.addView(heroButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)));
         heroRemove = text(13, Ui.font(this, "semibold"), 1f);
         heroRemove.setShadowLayer(0, 0, 0, 0);
-        heroRemove.setText("\u2715  Remove");
+        heroRemove.setText("\u2715  Убрать");
         heroRemove.setGravity(Gravity.CENTER);
         heroRemove.setPadding(dp(16), 0, dp(18), 0);
         heroRemoveBg = new GradientDrawable();
@@ -2363,34 +2347,13 @@ public class MainActivity extends Activity {
                     ? (it.remainingMin / 60) + " h " + (it.remainingMin % 60) + " min left" : it.remainingMin + " min left");
             heroMeta.setText(String.join("  \u00B7  ", meta));
             heroOverview.setText(it.overview);
-            heroBtnText.setText("\u25B6  Resume");
+            heroBtnText.setText("\u25B6  Продолжить");
             try {
                 heroProvider.setImageDrawable(getPackageManager().getApplicationIcon(it.pkg));
                 heroProvider.setVisibility(View.VISIBLE);
             } catch (PackageManager.NameNotFoundException e) {
                 heroProvider.setVisibility(View.GONE);
             }
-            heroBtnIcon.setVisibility(View.GONE);
-            if (heroShown && dir != 0) {
-                heroInfo.animate().cancel();
-                heroInfo.setAlpha(0f);
-                heroInfo.setTranslationX(dp(28) * dir);
-                heroInfo.animate().withLayer().alpha(1f).translationX(0).setDuration(520).setInterpolator(EASE).start();
-            }
-            return;
-        }
-        if ("news".equals(it.type)) {
-            // News: section and newsroom, how long ago. No button: stories are read on the shelf.
-            String age = News.age(it.published);
-            heroMeta.setText(it.genres + (age.isEmpty() ? "" : "  \u00B7  " + age));
-            heroOverview.setText(it.overview);
-            // Stories are for reading: the summary stays visible, up to four lines.
-            heroOverview.setMaxLines(4);
-            Ui.textSize(heroOverview, 13.5f);
-            heroOverview.animate().cancel();
-            heroOverview.setVisibility(it.overview.isEmpty() ? View.GONE : View.VISIBLE);
-            heroOverview.setAlpha(0.85f);
-            heroProvider.setVisibility(View.GONE);
             heroBtnIcon.setVisibility(View.GONE);
             if (heroShown && dir != 0) {
                 heroInfo.animate().cancel();
@@ -2479,7 +2442,7 @@ public class MainActivity extends Activity {
         classicCwBox.setAlpha(0f);
 
         classicCwHeader = text(12f, Ui.font(this, "semibold"), 0.88f);
-        classicCwHeader.setText(I18n.s(this, "Continue watching", "İzlemeye devam et"));
+        classicCwHeader.setText(I18n.t(this, "Continue watching"));
         classicCwHeader.setLetterSpacing(0.01f);
         classicCwHeader.setShadowLayer(dp(8), 0, dp(2), 0xCC000000);
         LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
@@ -2668,7 +2631,7 @@ public class MainActivity extends Activity {
                 }
                 hideClassicDashboard();
                 if (classicCwHeader != null) {
-                    classicCwHeader.setText(I18n.s(this, "Continue watching", "İzlemeye devam et"));
+                    classicCwHeader.setText(I18n.t(this, "Continue watching"));
                 }
                 int cardW = dp(SceneHome.SHELF_CARD_W_DP);
                 int cardH = dp(SceneHome.SHELF_CARD_H_DP);
@@ -3149,7 +3112,7 @@ public class MainActivity extends Activity {
         } catch (ActivityNotFoundException | SecurityException e) {
             clearLaunchDim();
             if (Scenes.isScenesLook(this) && sceneHome != null) sceneHome.sceneView.start();
-            toast(I18n.s(this, "Can't open " + a.label, a.label + " açılamıyor"));
+            toast((I18n.t(this, "Can't open ") + a.label));
         }
     }
 
@@ -3489,7 +3452,7 @@ public class MainActivity extends Activity {
     AppEntry folderEntry() {
         AppEntry f = new AppEntry();
         f.key = FOLDER_KEY;
-        f.label = I18n.s(this, "Other Apps", "Diğer Uygulamalar");
+        f.label = I18n.t(this, "Other Apps");
         f.color = 0xFF3A3A3C;
         f.banner = new BitmapDrawable(getResources(), folderArt());
         f.icon = f.banner;
@@ -3784,7 +3747,7 @@ public class MainActivity extends Activity {
         AppEntry s = new AppEntry();
         s.key = SETTINGS_KEY;
         s.pkg = TV_SETTINGS;
-        s.defaultLabel = I18n.s(this, "Settings", "Ayarlar");
+        s.defaultLabel = I18n.t(this, "Settings");
         s.label = getCustomAppName(this, s.key, s.pkg, s.defaultLabel);
         s.system = true;
         s.launch = new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -3817,7 +3780,7 @@ public class MainActivity extends Activity {
         AppEntry e = new AppEntry();
         e.key = INPUTS_KEY;
         e.pkg = getPackageName();
-        e.defaultLabel = I18n.s(this, "Inputs", "Girişler");
+        e.defaultLabel = I18n.t(this, "Inputs");
         e.label = getCustomAppName(this, e.key, null, e.defaultLabel);
         e.system = true;
         e.color = 0xFF48484A;
@@ -3839,7 +3802,7 @@ public class MainActivity extends Activity {
         AppEntry e = new AppEntry();
         e.key = PRESENT_KEY;
         e.pkg = getPackageName();
-        e.defaultLabel = I18n.s(this, "Presentation", "Sunum");
+        e.defaultLabel = I18n.t(this, "Presentation");
         e.label = getCustomAppName(this, e.key, null, e.defaultLabel);
         e.system = true;
         e.color = 0xFF4370FF;
@@ -3861,7 +3824,7 @@ public class MainActivity extends Activity {
             e.pkg = ai.packageName;
             e.key = cn.flattenToShortString();
             e.defaultLabel = TV_SETTINGS.equals(e.pkg)
-                    ? I18n.s(this, "Settings", "Ayarlar")
+                    ? I18n.t(this, "Settings")
                     : ri.loadLabel(pm).toString();
             e.label = getCustomAppName(this, e.key, e.pkg, e.defaultLabel);
             e.banner = leanback ? ai.loadBanner(pm) : null;
@@ -3957,8 +3920,8 @@ public class MainActivity extends Activity {
             focusIndex(Math.min(i, Math.max(0, shown.size() - 1)));
         }
         toast(toOther
-                ? I18n.s(this, a.label + " moved to Other Apps", a.label + " Diğer Uygulamalar'a taşındı")
-                : I18n.s(this, a.label + " is back on Home", a.label + " Ana Ekran'a geri döndü"));
+                ? (a.label + I18n.t(this, " moved to Other Apps"))
+                : (a.label + I18n.t(this, " is back on Home")));
     }
 
     void ensureInFirstDockRow(String key) {
@@ -4007,9 +3970,8 @@ public class MainActivity extends Activity {
             focusIndex(Math.min(i, Math.max(0, shown.size() - 1)));
         }
         toast(hide
-                ? I18n.s(this, a.label + " hidden (Settings > Apps > Hidden apps)",
-                        a.label + " gizlendi (Ayarlar > Uygulamalar > Gizlenen uygulamalar)")
-                : I18n.s(this, a.label + " is back on Home", a.label + " Ana Ekran'a geri döndü"));
+                ? (a.label + I18n.t(this, " hidden (Settings > Apps > Hidden apps)"))
+                : (a.label + I18n.t(this, " is back on Home")));
     }
 
     void registerPackageReceiver() {
@@ -4047,9 +4009,9 @@ public class MainActivity extends Activity {
 
         String fallback = (a.defaultLabel != null && !a.defaultLabel.isEmpty()) ? a.defaultLabel : a.label;
         AlertDialog.Builder b = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(I18n.s(this, "Rename App", "Uygulamayı Yeniden Adlandır"))
+                .setTitle(I18n.t(this, "Rename App"))
                 .setView(box)
-                .setPositiveButton(I18n.s(this, "Save", "Kaydet"), (d, w) -> {
+                .setPositiveButton(I18n.t(this, "Save"), (d, w) -> {
                     String n = in.getText().toString().trim();
                     if (n.length() > 32) n = n.substring(0, 32);
                     if (n.isEmpty() || (fallback != null && n.equals(fallback))) {
@@ -4061,7 +4023,7 @@ public class MainActivity extends Activity {
                     }
                     if (onDone != null) onDone.run();
                 })
-                .setNegativeButton(I18n.s(this, "Cancel", "İptal"), (d, w) -> {
+                .setNegativeButton(I18n.t(this, "Cancel"), (d, w) -> {
                     if (onDone != null) onDone.run();
                 })
                 .setOnCancelListener(d -> {
@@ -4069,7 +4031,7 @@ public class MainActivity extends Activity {
                 });
 
         if (hasCustomAppName(this, a.key, a.pkg)) {
-            b.setNeutralButton(I18n.s(this, "Reset", "Sıfırla"), (d, w) -> {
+            b.setNeutralButton(I18n.t(this, "Reset"), (d, w) -> {
                 setCustomAppName(this, a.key, a.pkg, "");
                 if (fallback != null) a.label = fallback;
                 if (onDone != null) onDone.run();
@@ -4107,18 +4069,18 @@ public class MainActivity extends Activity {
         if (a == null) return;
         boolean hasCustom = CustomMedia.hasCustomAppIcon(this, a.key, a.pkg);
         String resetLabel = hasCustom
-                ? I18n.s(this, "Reset to default icon", "Varsayılan simgeye sıfırla")
+                ? I18n.t(this, "Reset to default icon")
                 : null;
         Runnable onReset = hasCustom ? () -> {
             CustomMedia.clearCustomAppIcon(this, a.key, a.pkg);
             if (sceneHome != null) sceneHome.invalidateAppLogoCache(a);
-            toast(I18n.s(this, "App icon reset to default", "Uygulama simgesi varsayılana sıfırlandı"));
+            toast(I18n.t(this, "App icon reset to default"));
             if (onDone != null) onDone.run();
         } : null;
 
         CustomMedia.showImageFilePicker(
                 this,
-                I18n.s(this, "Change app icon", "Uygulama simgesini değiştir") + " — " + a.label,
+                I18n.t(this, "Change app icon") + " — " + a.label,
                 true,
                 512,
                 512,
@@ -4132,7 +4094,7 @@ public class MainActivity extends Activity {
                         editedBmp -> {
                             if (CustomMedia.setCustomAppIcon(this, a.key, a.pkg, editedBmp)) {
                                 if (sceneHome != null) sceneHome.invalidateAppLogoCache(a);
-                                toast(I18n.s(this, "App icon updated", "Uygulama simgesi güncellendi"));
+                                toast(I18n.t(this, "App icon updated"));
                                 if (onDone != null) onDone.run();
                             }
                         }));
@@ -4143,34 +4105,34 @@ public class MainActivity extends Activity {
         View tile = tiles.get(index);
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        labels.add(I18n.s(this, "Open", "Aç"));
+        labels.add(I18n.t(this, "Open"));
         actions.add(() -> launchAnimated(tile, a));
         if (!FOLDER_KEY.equals(a.key)) {
-            labels.add(I18n.s(this, "Rename", "Yeniden Adlandır"));
+            labels.add(I18n.t(this, "Rename"));
             actions.add(() -> promptRenameApp(a, () -> reload(a.key)));
-            labels.add(I18n.s(this, "Change app icon", "Uygulama simgesini değiştir"));
+            labels.add(I18n.t(this, "Change app icon"));
             actions.add(() -> promptChangeAppIcon(a, () -> reload(a.key)));
         }
         if (folderMode) {
-            labels.add(I18n.s(this, "Show on Home Screen", "Ana Ekranda Göster"));
+            labels.add(I18n.t(this, "Show on Home Screen"));
             actions.add(() -> setOtherApp(a, false));
             if (!isSettings(a)) {
-                labels.add(I18n.s(this, "Hide", "Gizle"));
+                labels.add(I18n.t(this, "Hide"));
                 actions.add(() -> setHidden(a, true));
             }
         } else {
-            labels.add(I18n.s(this, "Move", "Taşı"));
+            labels.add(I18n.t(this, "Move"));
             actions.add(() -> startMove(index));
             if (!isSettings(a)) {
-                labels.add(I18n.s(this, "Move to Other Apps", "Diğer Uygulamalara Taşı"));
+                labels.add(I18n.t(this, "Move to Other Apps"));
                 actions.add(() -> setOtherApp(a, true));
-                labels.add(I18n.s(this, "Hide", "Gizle"));
+                labels.add(I18n.t(this, "Hide"));
                 actions.add(() -> setHidden(a, true));
             }
         }
-        String uninstLabel = I18n.s(this, "Uninstall", "Kaldır");
+        String uninstLabel = I18n.t(this, "Uninstall");
         if (!isSettings(a) && !INPUTS_KEY.equals(a.key)) {
-            labels.add(I18n.s(this, "App Info", "Uygulama Bilgileri"));
+            labels.add(I18n.t(this, "App Info"));
             actions.add(() -> startSafe(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + a.pkg))));
             if (!a.system) {
@@ -4179,7 +4141,7 @@ public class MainActivity extends Activity {
             }
         }
         if (!folderMode) {
-            labels.add(I18n.s(this, "Reset Layout", "Düzeni Sıfırla"));
+            labels.add(I18n.t(this, "Reset Layout"));
             actions.add(() -> {
                 prefs.edit().remove(PREF_ORDER).apply();
                 reload(a.key);
@@ -4367,7 +4329,7 @@ public class MainActivity extends Activity {
     }
 
     String memoryState() {
-        return Math.round(memoryUsed() * 100) + I18n.s(this, "% used  \u00b7  Clean", "% kullanımda  \u00b7  Temizle");
+        return Math.round(memoryUsed() * 100) + I18n.t(this, "% used  \u00b7  Clean");
     }
 
     View memBarFill;
@@ -4433,7 +4395,7 @@ public class MainActivity extends Activity {
         android.app.ActivityManager am = getSystemService(android.app.ActivityManager.class);
         List<String> apps = recentApps();
         if (apps.isEmpty()) {
-            toast(I18n.s(this, "No apps to close", "Kapatılacak uygulama yok"));
+            toast(I18n.t(this, "No apps to close"));
             return;
         }
         long before = availMem(am);
@@ -4448,9 +4410,7 @@ public class MainActivity extends Activity {
             getSharedPreferences("clean", MODE_PRIVATE).edit().remove("recent").apply();
             long freed = Math.max(0, availMem(am) - before) / (1024 * 1024);
             updateMemoryBar();
-            toast(I18n.s(this,
-                    "Closed " + apps.size() + (apps.size() == 1 ? " app" : " apps") + (freed > 0 ? " \u00b7 freed " + freed + " MB" : ""),
-                    apps.size() + " uygulama kapatıldı" + (freed > 0 ? " \u00b7 " + freed + " MB boşaltıldı" : "")));
+            toast((I18n.t(this, "Closed ") + apps.size() + (apps.size() == 1 ? I18n.t(this, " app") : I18n.t(this, " apps")) + (freed > 0 ? I18n.t(this, " \u00b7 freed ") + freed + I18n.t(this, " MB") : "")));
         };
         if (PowerService.instance != null) {
             closeProfilePicker();
@@ -4470,22 +4430,22 @@ public class MainActivity extends Activity {
         try {
             android.net.ConnectivityManager cm = getSystemService(android.net.ConnectivityManager.class);
             android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            if (nc == null) return I18n.s(this, "Not Connected", "Bağlı Değil");
+            if (nc == null) return I18n.t(this, "Not Connected");
             if (nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)) return "Ethernet";
-            if (!nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) return I18n.s(this, "Connected", "Bağlı");
+            if (!nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) return I18n.t(this, "Connected");
             android.net.wifi.WifiManager wm = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class);
             String ssid = wm.getConnectionInfo().getSSID();
-            if (ssid == null || ssid.contains("unknown ssid")) return I18n.s(this, "Connected", "Bağlı");
+            if (ssid == null || ssid.contains("unknown ssid")) return I18n.t(this, "Connected");
             return ssid.replace("\"", "");
         } catch (Exception e) {
-            return I18n.s(this, "Connected", "Bağlı");
+            return I18n.t(this, "Connected");
         }
     }
 
     String dndState() {
         android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
         return nm.getCurrentInterruptionFilter() > android.app.NotificationManager.INTERRUPTION_FILTER_ALL
-                ? I18n.s(this, "On", "Açık") : I18n.s(this, "Off", "Kapalı");
+                ? I18n.t(this, "On") : I18n.t(this, "Off");
     }
 
     void toggleDnd() {
@@ -4510,12 +4470,12 @@ public class MainActivity extends Activity {
                 default: break;
             }
         }
-        return I18n.s(this, "TV Speakers", "TV Hoparlörü");
+        return I18n.t(this, "TV Speakers");
     }
 
     String timerState() {
         int left = SleepReceiver.timerLeft(this);
-        return left > 0 ? left + I18n.s(this, " min left", " dk kaldı") : I18n.s(this, "Off", "Kapalı");
+        return left > 0 ? left + I18n.t(this, " min left") : I18n.t(this, "Off");
     }
 
     /** Off \u2192 15 \u2192 30 \u2192 60 \u2192 90 \u2192 Off. */
@@ -4557,16 +4517,16 @@ public class MainActivity extends Activity {
         panel.setClipChildren(false);
         List<View> cells = new ArrayList<>();
         TextView title = text(13, Ui.font(this, "semibold"), 0.75f);
-        title.setText(I18n.s(this, "Inputs", "Girişler"));
+        title.setText(I18n.t(this, "Inputs"));
         panel.addView(title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(20)));
         int top = dp(26);
         for (int i = 0; i < list.size(); i++) {
             Inputs.Input in = list.get(i);
             int x = (i % 2) * (col + gap), y = top + (i / 2) * (cap + gap);
             cells.add(ccTile(panel, x, y, col, cap, Inputs.glyph(in), in.label,
-                    in.disconnected ? () -> I18n.s(this, "Not connected", "Bağlı değil") : null, false, v -> {
+                    in.disconnected ? () -> I18n.t(this, "Not connected") : null, false, v -> {
                         closeProfilePicker();
-                        if (!Inputs.open(this, in)) toast(I18n.s(this, "Can't switch to " + in.label, in.label + " girişine geçilemiyor"));
+                        if (!Inputs.open(this, in)) toast((I18n.t(this, "Can't switch to ") + in.label));
                     }));
         }
         int rows = (list.size() + 1) / 2;
@@ -4991,9 +4951,9 @@ public class MainActivity extends Activity {
                     int cm = CustomMedia.getCustomWallpaperSubMode(MainActivity.this, CustomMedia.SCOPE_CLASSIC);
                     if (cm == CustomMedia.CUSTOM_MODE_FOLDER_SHUFFLE) {
                         setWallpaper(wallStyle);
-                    } else if (cm == CustomMedia.CUSTOM_MODE_REDDIT
-                            && CustomMedia.isRedditChangeDue(MainActivity.this, CustomMedia.SCOPE_CLASSIC)) {
-                        CustomMedia.fetchNextRedditWallpaperAsync(MainActivity.this, CustomMedia.SCOPE_CLASSIC,
+                    } else if (cm == CustomMedia.CUSTOM_MODE_ONLINE
+                            && CustomMedia.isOnlineChangeDue(MainActivity.this, CustomMedia.SCOPE_CLASSIC)) {
+                        CustomMedia.fetchNextOnlineWallpaperAsync(MainActivity.this, CustomMedia.SCOPE_CLASSIC,
                                 () -> setWallpaper(wallStyle));
                     }
                 } else if (FOLDER_SHUFFLE_WALL_KEY.equals(wallStyle)) {
@@ -5061,18 +5021,7 @@ public class MainActivity extends Activity {
 
     /** The full forecast: a glass panel opening from the weather card in the top-left corner (or top-right weather shortcut in Night Scenes / Classic Big Clock). */
     void showWeather() {
-        Weather.Data d = Weather.cached(this);
-        if (d == null) {
-            if (Weather.enabled(this)) {
-                Weather.refresh(this, true, () -> {
-                    updateWeather();
-                    if (Weather.cached(this) != null) {
-                        showWeather();
-                    }
-                });
-            }
-            return;
-        }
+        if (!Weather.enabled(this)) return;
         dropPicker();
         stopSway(null);
         boolean rightSide = false;
@@ -5102,7 +5051,7 @@ public class MainActivity extends Activity {
         glass.lens = dp(7);
         panel.setBackground(glass);
         panel.setFocusable(true);
-        panel.setData(d);
+        Weather.bind(panel, () -> panel.setData(Weather.cached(this)));
         FrameLayout.LayoutParams plp = new FrameLayout.LayoutParams(dp(WeatherView.FULL_W), dp(WeatherView.FULL_H),
                 Gravity.TOP | (rightSide ? Gravity.END : Gravity.START));
         plp.topMargin = dp(24);
@@ -5121,11 +5070,6 @@ public class MainActivity extends Activity {
         layer.animate().alpha(1f).setDuration(200).start();
         panel.animate().translationY(0).setDuration(260).setInterpolator(EASE).start();
         panel.requestFocus();
-        Weather.refresh(this, false, () -> {
-            Weather.Data nd = Weather.cached(this);
-            if (nd != null && panel.isAttachedToWindow()) panel.setData(nd);
-            updateWeather();
-        });
     }
 
     // ---------------------------------------------------------------- profiles
@@ -5193,8 +5137,8 @@ public class MainActivity extends Activity {
         col.setClipToPadding(false);
         TextView title = text(30, Ui.font(this, "display"), 1f);
         title.setText(onWake
-                ? I18n.s(this, "Who\u2019s Watching?", "Kim İzliyor?")
-                : I18n.s(this, "Switch Profile", "Profil Değiştir"));
+                ? I18n.t(this, "Who\u2019s Watching?")
+                : I18n.t(this, "Switch Profile"));
         title.setLetterSpacing(-0.02f);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tlp.bottomMargin = dp(34);
@@ -5225,8 +5169,8 @@ public class MainActivity extends Activity {
             cells.add(cell);
         }
         if (Profiles.canAdd(this)) {
-            View add = profileCell(null, I18n.s(this, "Add User", "Kullanıcı Ekle"), true, false);
-            add.setOnClickListener(v -> askName(I18n.s(this, "New Profile", "Yeni Profil"), "", name -> {
+            View add = profileCell(null, I18n.t(this, "Add User"), true, false);
+            add.setOnClickListener(v -> askName(I18n.t(this, "New Profile"), "", name -> {
                 if (Profiles.add(this, name) != null) {
                     refreshAvatar();
                     showProfilePicker(false);
@@ -5573,14 +5517,14 @@ public class MainActivity extends Activity {
         Profiles.Profile prof = p;
         List<String> l = new ArrayList<>();
         List<Runnable> act = new ArrayList<>();
-        l.add(I18n.s(this, "Rename", "Yeniden Adlandır"));
-        act.add(() -> askName(I18n.s(this, "Rename Profile", "Profili Yeniden Adlandır"), prof.name, name -> {
+        l.add(I18n.t(this, "Rename"));
+        act.add(() -> askName(I18n.t(this, "Rename Profile"), prof.name, name -> {
             prof.name = name;
             Profiles.update(this, prof);
             refreshAvatar();
             showProfilePicker(false);
         }));
-        l.add(I18n.s(this, "Change Emoji", "Emojiyi Değiştir"));
+        l.add(I18n.t(this, "Change Emoji"));
         act.add(() -> {
             List<String> free = Profiles.freeEmojis(this, prof.id);
             String[] items = new String[free.size()];
@@ -5590,7 +5534,7 @@ public class MainActivity extends Activity {
                 if (free.get(i).equals(prof.emoji)) cur = i;
             }
             new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle("Emoji")
+                    .setTitle("Эмодзи")
                     .setSingleChoiceItems(items, cur, (d, w) -> {
                         prof.emoji = free.get(w);
                         Profiles.update(this, prof);
@@ -5599,9 +5543,9 @@ public class MainActivity extends Activity {
                         showProfilePicker(false);
                     }).show();
         });
-        l.add(I18n.s(this, "Change Colour", "Rengi Değiştir"));
+        l.add(I18n.t(this, "Change Colour"));
         act.add(() -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(I18n.s(this, "Colour", "Renk"))
+                .setTitle(I18n.t(this, "Colour"))
                 .setSingleChoiceItems(Profiles.COLOR_NAMES, prof.color, (d, w) -> {
                     prof.color = w;
                     Profiles.update(this, prof);
@@ -5612,18 +5556,18 @@ public class MainActivity extends Activity {
         int del = -1;
         if (Profiles.list(this).size() > 1) {
             del = l.size();
-            l.add(I18n.s(this, "Delete", "Sil"));
+            l.add(I18n.t(this, "Delete"));
             act.add(() -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(I18n.s(this, "Delete \u201C" + prof.name + "\u201D?", "\u201C" + prof.name + "\u201D silinsin mi?"))
-                    .setMessage(I18n.s(this, "Its layout and Continue Watching list will be removed.", "Düzeni ve İzlemeye Devam Et listesi kaldırılacak."))
-                    .setPositiveButton(I18n.s(this, "Delete", "Sil"), (d, w) -> {
+                    .setTitle((I18n.t(this, "Delete \u201C") + prof.name + "\u201D?"))
+                    .setMessage(I18n.t(this, "Its layout and Continue Watching list will be removed."))
+                    .setPositiveButton(I18n.t(this, "Delete"), (d, w) -> {
                         boolean wasCurrent = Profiles.current(this).id.equals(prof.id);
                         Profiles.delete(this, prof.id);
                         if (wasCurrent) switchProfile(Profiles.current(this).id);
                         else refreshAvatar();
                         showProfilePicker(false);
                     })
-                    .setNegativeButton(I18n.s(this, "Cancel", "İptal"), null).show());
+                    .setNegativeButton(I18n.t(this, "Cancel"), null).show());
         }
         showMenu(cell, I18n.profileName(this, prof.name), l, act, del);
     }
@@ -5644,11 +5588,11 @@ public class MainActivity extends Activity {
         AlertDialog dlg = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(title)
                 .setView(box)
-                .setPositiveButton(I18n.s(this, "Save", "Kaydet"), (d, w) -> {
+                .setPositiveButton(I18n.t(this, "Save"), (d, w) -> {
                     String n = in.getText().toString().trim();
                     if (!n.isEmpty()) r.ok(n.length() > 20 ? n.substring(0, 20) : n);
                 })
-                .setNegativeButton(I18n.s(this, "Cancel", "İptal"), null)
+                .setNegativeButton(I18n.t(this, "Cancel"), null)
                 .show();
         Ui.setupDialogEditText(in, dlg);
         in.requestFocus();

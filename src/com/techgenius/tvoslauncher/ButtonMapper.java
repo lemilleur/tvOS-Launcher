@@ -83,15 +83,15 @@ public final class ButtonMapper {
 
     public static String sendKeyCodeName(Context c, int code) {
         switch (code) {
-            case KeyEvent.KEYCODE_VOLUME_MUTE: return I18n.s(c, "Mute / Unmute (164)", "Sesi Kapat / Aç (164)");
-            case KeyEvent.KEYCODE_VOLUME_UP: return I18n.s(c, "Volume Up (24)", "Sesini Aç (24)");
-            case KeyEvent.KEYCODE_VOLUME_DOWN: return I18n.s(c, "Volume Down (25)", "Sesini Kıs (25)");
-            case KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK: return I18n.s(c, "Audio Track (222)", "Ses Parçası / Dil (222)");
-            case KeyEvent.KEYCODE_BACK: return I18n.s(c, "Back (4)", "Geri (4)");
-            case KeyEvent.KEYCODE_HOME: return I18n.s(c, "Home (3)", "Ana Ekran (3)");
-            case KeyEvent.KEYCODE_APP_SWITCH: return I18n.s(c, "App Switch / Recents (187)", "Son Uygulamalar (187)");
-            case KeyEvent.KEYCODE_NOTIFICATION: return I18n.s(c, "Notifications (83)", "Bildirimler (83)");
-            case KeyEvent.KEYCODE_SLEEP: return I18n.s(c, "Sleep / Standby (223)", "Uyku / Bekleme (223)");
+            case KeyEvent.KEYCODE_VOLUME_MUTE: return I18n.t(c, "Mute / Unmute (164)");
+            case KeyEvent.KEYCODE_VOLUME_UP: return I18n.t(c, "Volume Up (24)");
+            case KeyEvent.KEYCODE_VOLUME_DOWN: return I18n.t(c, "Volume Down (25)");
+            case KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK: return I18n.t(c, "Audio Track (222)");
+            case KeyEvent.KEYCODE_BACK: return I18n.t(c, "Back (4)");
+            case KeyEvent.KEYCODE_HOME: return I18n.t(c, "Home (3)");
+            case KeyEvent.KEYCODE_APP_SWITCH: return I18n.t(c, "App Switch / Recents (187)");
+            case KeyEvent.KEYCODE_NOTIFICATION: return I18n.t(c, "Notifications (83)");
+            case KeyEvent.KEYCODE_SLEEP: return I18n.t(c, "Sleep / Standby (223)");
             default: return keyLabel(c, code) + " (" + code + ")";
         }
     }
@@ -166,9 +166,9 @@ public final class ButtonMapper {
 
     public static String getVolumeHoldFixModeLabel(Context c) {
         if (getVolumeHoldFixMode(c) == VOLUME_FIX_MODE_2) {
-            return I18n.s(c, "Mode 2 (HY320 / Projector)", "Mod 2 (HY320 / Projeksiyon)");
+            return I18n.t(c, "Mode 2 (HY320 / Projector)");
         }
-        return I18n.s(c, "Mode 1 (Standard · Default)", "Mod 1 (Standart · Varsayılan)");
+        return I18n.t(c, "Mode 1 (Standard · Default)");
     }
 
     public static boolean isKeyCustomMapped(Context c, int keyCode) {
@@ -379,9 +379,9 @@ public final class ButtonMapper {
 
     public static String tapTypeLabel(Context c, int tapCount) {
         switch (tapCount) {
-            case TAP_SINGLE: return I18n.s(c, "Single Tap (1x)", "Tek Basış (1x)");
-            case TAP_DOUBLE: return I18n.s(c, "Double Tap (2x)", "Çift Basış (2x)");
-            case TAP_TRIPLE: return I18n.s(c, "Triple Tap (3x)", "Üçlü Basış (3x)");
+            case TAP_SINGLE: return I18n.t(c, "Single Tap (1x)");
+            case TAP_DOUBLE: return I18n.t(c, "Double Tap (2x)");
+            case TAP_TRIPLE: return I18n.t(c, "Triple Tap (3x)");
             default: return tapCount + "x";
         }
     }
@@ -395,7 +395,7 @@ public final class ButtonMapper {
         if (!t1.isEmpty()) parts.add("1x: " + targetLabel(c, t1));
         if (!t2.isEmpty()) parts.add("2x: " + targetLabel(c, t2));
         if (!t3.isEmpty()) parts.add("3x: " + targetLabel(c, t3));
-        if (parts.isEmpty()) return I18n.s(c, "None", "Yok");
+        if (parts.isEmpty()) return I18n.t(c, "None");
         if (parts.size() == 1 && !t1.isEmpty() && t2.isEmpty() && t3.isEmpty()) {
             return "1x: " + targetLabel(c, t1);
         }
@@ -404,31 +404,31 @@ public final class ButtonMapper {
 
     public static String keyLabel(Context c, int keyCode) {
         switch (keyCode) {
-            case KeyEvent.KEYCODE_PROG_RED: return I18n.s(c, "Red Button", "Kırmızı Tuş");
-            case KeyEvent.KEYCODE_PROG_GREEN: return I18n.s(c, "Green Button", "Yeşil Tuş");
-            case KeyEvent.KEYCODE_PROG_YELLOW: return I18n.s(c, "Yellow Button", "Sarı Tuş");
-            case KeyEvent.KEYCODE_PROG_BLUE: return I18n.s(c, "Blue Button", "Mavi Tuş");
-            case KeyEvent.KEYCODE_MENU: return I18n.s(c, "Menu Button", "Menü Tuşu");
-            case KeyEvent.KEYCODE_GUIDE: return I18n.s(c, "Guide Button", "Rehber Tuşu");
-            case KeyEvent.KEYCODE_INFO: return I18n.s(c, "Info Button", "Bilgi Tuşu");
-            case KeyEvent.KEYCODE_CAPTIONS: return I18n.s(c, "Subtitles / CC", "Altyazı Tuşu");
-            case KeyEvent.KEYCODE_TV_INPUT: return I18n.s(c, "TV Input / Source", "Giriş / Kaynak Tuşu");
-            case KeyEvent.KEYCODE_CHANNEL_UP: return I18n.s(c, "Channel Up", "Kanal Yukarı");
-            case KeyEvent.KEYCODE_CHANNEL_DOWN: return I18n.s(c, "Channel Down", "Kanal Aşağı");
-            case KeyEvent.KEYCODE_BOOKMARK: return I18n.s(c, "Bookmark / Favorite", "Favori Tuşu");
+            case KeyEvent.KEYCODE_PROG_RED: return I18n.t(c, "Red Button");
+            case KeyEvent.KEYCODE_PROG_GREEN: return I18n.t(c, "Green Button");
+            case KeyEvent.KEYCODE_PROG_YELLOW: return I18n.t(c, "Yellow Button");
+            case KeyEvent.KEYCODE_PROG_BLUE: return I18n.t(c, "Blue Button");
+            case KeyEvent.KEYCODE_MENU: return I18n.t(c, "Menu Button");
+            case KeyEvent.KEYCODE_GUIDE: return I18n.t(c, "Guide Button");
+            case KeyEvent.KEYCODE_INFO: return I18n.t(c, "Info Button");
+            case KeyEvent.KEYCODE_CAPTIONS: return I18n.t(c, "Subtitles / CC");
+            case KeyEvent.KEYCODE_TV_INPUT: return I18n.t(c, "TV Input / Source");
+            case KeyEvent.KEYCODE_CHANNEL_UP: return I18n.t(c, "Channel Up");
+            case KeyEvent.KEYCODE_CHANNEL_DOWN: return I18n.t(c, "Channel Down");
+            case KeyEvent.KEYCODE_BOOKMARK: return I18n.t(c, "Bookmark / Favorite");
             case KeyEvent.KEYCODE_DVR: return "DVR";
-            case KeyEvent.KEYCODE_LAST_CHANNEL: return I18n.s(c, "Last Channel", "Son Kanal");
-            case KeyEvent.KEYCODE_SETTINGS: return I18n.s(c, "Settings Button", "Ayarlar Tuşu");
-            case KeyEvent.KEYCODE_SEARCH: return I18n.s(c, "Search Button", "Arama Tuşu");
-            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: return I18n.s(c, "Play / Pause", "Oynat / Duraklat");
-            case KeyEvent.KEYCODE_MEDIA_PLAY: return I18n.s(c, "Play", "Oynat");
-            case KeyEvent.KEYCODE_MEDIA_PAUSE: return I18n.s(c, "Pause", "Duraklat");
-            case KeyEvent.KEYCODE_MEDIA_STOP: return I18n.s(c, "Stop", "Durdur");
-            case KeyEvent.KEYCODE_MEDIA_REWIND: return I18n.s(c, "Rewind", "Geri Sar");
-            case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD: return I18n.s(c, "Fast Forward", "İleri Sar");
-            case KeyEvent.KEYCODE_MEDIA_NEXT: return I18n.s(c, "Next Track", "Sonraki Parça");
-            case KeyEvent.KEYCODE_MEDIA_PREVIOUS: return I18n.s(c, "Previous Track", "Önceki Parça");
-            case KeyEvent.KEYCODE_MEDIA_RECORD: return I18n.s(c, "Record Button", "Kayıt Tuşu");
+            case KeyEvent.KEYCODE_LAST_CHANNEL: return I18n.t(c, "Last Channel");
+            case KeyEvent.KEYCODE_SETTINGS: return I18n.t(c, "Settings Button");
+            case KeyEvent.KEYCODE_SEARCH: return I18n.t(c, "Search Button");
+            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: return I18n.t(c, "Play / Pause");
+            case KeyEvent.KEYCODE_MEDIA_PLAY: return I18n.t(c, "Play");
+            case KeyEvent.KEYCODE_MEDIA_PAUSE: return I18n.t(c, "Pause");
+            case KeyEvent.KEYCODE_MEDIA_STOP: return I18n.t(c, "Stop");
+            case KeyEvent.KEYCODE_MEDIA_REWIND: return I18n.t(c, "Rewind");
+            case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD: return I18n.t(c, "Fast Forward");
+            case KeyEvent.KEYCODE_MEDIA_NEXT: return I18n.t(c, "Next Track");
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS: return I18n.t(c, "Previous Track");
+            case KeyEvent.KEYCODE_MEDIA_RECORD: return I18n.t(c, "Record Button");
             default: {
                 String raw = KeyEvent.keyCodeToString(keyCode);
                 if (raw != null && raw.startsWith("KEYCODE_")) {
@@ -440,29 +440,29 @@ public final class ButtonMapper {
     }
 
     public static String targetLabel(Context c, String target) {
-        if (target == null || target.isEmpty()) return I18n.s(c, "None", "Yok");
+        if (target == null || target.isEmpty()) return I18n.t(c, "None");
         if (TARGET_CONTROL_PANEL.equals(target)) {
-            return I18n.s(c, "Control Panel", "Denetim Paneli");
+            return I18n.t(c, "Control Panel");
         }
         if (TARGET_RECENT_APPS.equals(target)) {
-            return I18n.s(c, "Recent Apps Switcher", "Son Uygulamalar");
+            return I18n.t(c, "Recent Apps Switcher");
         }
         if (TARGET_INPUTS_OVERLAY.equals(target)) {
             return I18n.t(c, "bm_inputs_overlay");
         }
         if (TARGET_AMBIENT.equals(target) || TARGET_STANDBY.equals(target)) {
-            return I18n.s(c, "Ambient Mode / StandBy", "Ortam Modu / StandBy");
+            return I18n.t(c, "Ambient Mode / StandBy");
         }
         if (TARGET_LOCK_SCREEN.equals(target)) {
-            return I18n.s(c, "Lock Screen", "Kilit Ekranı");
+            return I18n.t(c, "Lock Screen");
         }
         if (TARGET_POWER_OFF.equals(target)) {
-            return I18n.s(c, "Power Off (Screen Off)", "Kapat (Ekranı Kapat)");
+            return I18n.t(c, "Power Off (Screen Off)");
         }
         if (target.startsWith(TARGET_KEYCODE_PREFIX)) {
             try {
                 int kc = Integer.parseInt(target.substring(TARGET_KEYCODE_PREFIX.length()).trim());
-                return I18n.s(c, "Key: ", "Tuş: ") + sendKeyCodeName(c, kc);
+                return I18n.t(c, "Key: ") + sendKeyCodeName(c, kc);
             } catch (Exception ignored) {
                 return target;
             }
@@ -706,11 +706,9 @@ public final class ButtonMapper {
             }
         });
 
-        AlertDialog dlg = themedDialog(a, I18n.s(a, "Add new button to remap", "Yeniden eşlemek için yeni düğme ekle"))
-                .setMessage(I18n.s(a,
-                        "Press the button on your remote that you want to remap…\n\n(D-pad navigation, OK and Back are kept for normal navigation.)",
-                        "Yeniden eşlemek istediğiniz kumanda düğmesine basın…\n\n(Yön tuşları, OK ve Geri tuşu normal gezinme için korunur.)"))
-                .setNegativeButton(I18n.s(a, "Cancel", "İptal"), (d, w) -> captureListener = null)
+        AlertDialog dlg = themedDialog(a, I18n.t(a, "Add new button to remap"))
+                .setMessage(I18n.t(a, "Press the button on your remote that you want to remap…\n\n(D-pad navigation, OK and Back are kept for normal navigation.)"))
+                .setNegativeButton(I18n.t(a, "Cancel"), (d, w) -> captureListener = null)
                 .setOnCancelListener(d -> captureListener = null)
                 .setOnDismissListener(d -> {
                     captureListener = null;
@@ -756,9 +754,9 @@ public final class ButtonMapper {
         items.add(tapTypeLabel(a, TAP_SINGLE) + ":  " + targetLabel(a, t1));
         items.add(tapTypeLabel(a, TAP_DOUBLE) + ":  " + targetLabel(a, t2));
         items.add(tapTypeLabel(a, TAP_TRIPLE) + ":  " + targetLabel(a, t3));
-        items.add("✓  " + I18n.s(a, "Done", "Tamam"));
+        items.add("✓  " + I18n.t(a, "Done"));
         if (hasAny) {
-            items.add("🗑  " + I18n.s(a, "Remove button remap", "Düğme eşlemesini kaldır"));
+            items.add("🗑  " + I18n.t(a, "Remove button remap"));
         }
 
         themedDialog(a, keyName)
@@ -775,11 +773,11 @@ public final class ButtonMapper {
                         removeMapping(a, keyCode);
                         if (onChanged != null) onChanged.run();
                         Toast.makeText(a,
-                                I18n.s(a, "Removed remap for " + keyName + ".", keyName + " eşlemesi kaldırıldı."),
+                                (I18n.t(a, "Removed remap for ") + keyName + "."),
                                 Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton(I18n.s(a, "Close", "Kapat"), (d, w) -> {
+                .setNegativeButton(I18n.t(a, "Close"), (d, w) -> {
                     if (onChanged != null) onChanged.run();
                 })
                 .show();
@@ -795,11 +793,11 @@ public final class ButtonMapper {
         List<String> targets = new ArrayList<>();
 
         // 1. Control Panel (Overlay)
-        labels.add("🎛  " + I18n.s(a, "Control Panel (Overlay)", "Denetim Paneli (Ekran Üstü)"));
+        labels.add("🎛  " + I18n.t(a, "Control Panel (Overlay)"));
         targets.add(TARGET_CONTROL_PANEL);
 
         // 2. Recent Apps Switcher (Overlay)
-        labels.add("🗂  " + I18n.s(a, "Recent Apps Switcher (Overlay)", "Son Uygulamalar Değiştiricisi (Ekran Üstü)"));
+        labels.add("🗂  " + I18n.t(a, "Recent Apps Switcher (Overlay)"));
         targets.add(TARGET_RECENT_APPS);
 
         // 2b. Inputs Panel (Overlay)
@@ -807,20 +805,20 @@ public final class ButtonMapper {
         targets.add(TARGET_INPUTS_OVERLAY);
 
         // 3. Ambient Mode / StandBy
-        labels.add("🌙  " + I18n.s(a, "Ambient Mode / StandBy", "Ortam Modu / StandBy"));
+        labels.add("🌙  " + I18n.t(a, "Ambient Mode / StandBy"));
         targets.add(TARGET_AMBIENT);
 
         // 4. Power Off (Screen Off)
-        labels.add("⏻  " + I18n.s(a, "Power Off (Screen Off)", "Kapat (Ekranı Kapat)"));
+        labels.add("⏻  " + I18n.t(a, "Power Off (Screen Off)"));
         targets.add(TARGET_POWER_OFF);
 
         // 5. Send Key Code (Media, Mute, Input, Subtitles, Custom KeyCode...)
-        labels.add("⌨  " + I18n.s(a, "Send Key Code…", "Tuş Kodu Gönder…"));
+        labels.add("⌨  " + I18n.t(a, "Send Key Code…"));
         targets.add(TARGET_PICK_KEYCODE);
 
         // 6. Clear / None option if already set
         if (!current.isEmpty()) {
-            labels.add("🚫  " + I18n.s(a, "None (Clear action)", "Yok (Eylemi temizle)"));
+            labels.add("🚫  " + I18n.t(a, "None (Clear action)"));
             targets.add("");
         }
 
@@ -861,21 +859,21 @@ public final class ButtonMapper {
                     // Re-open the key's 1x/2x/3x tap dialog so user can easily configure double/triple tap too
                     showConfigureKeyDialog(a, keyCode, onChanged);
                 })
-                .setNegativeButton(I18n.s(a, "Back", "Geri"), (d, w) -> showConfigureKeyDialog(a, keyCode, onChanged))
+                .setNegativeButton(I18n.t(a, "Back"), (d, w) -> showConfigureKeyDialog(a, keyCode, onChanged))
                 .show();
     }
 
     public static void showSendKeyCodePickerDialog(Activity a, int keyCode, int tapCount, Runnable onDone) {
         List<String> items = new ArrayList<>();
         List<Integer> codes = new ArrayList<>();
-        items.add("🔢  " + I18n.s(a, "Custom Key Code (Enter Number…)", "Özel Tuş Kodu (Sayı Girin…)"));
+        items.add("🔢  " + I18n.t(a, "Custom Key Code (Enter Number…)"));
         codes.add(-1);
         for (int[] row : COMMON_SEND_KEYCODES) {
             int kc = row[0];
             items.add(sendKeyCodeName(a, kc));
             codes.add(kc);
         }
-        themedDialog(a, I18n.s(a, "Send Key Code", "Tuş Kodu Gönder"))
+        themedDialog(a, I18n.t(a, "Send Key Code"))
                 .setItems(items.toArray(new String[0]), (d, which) -> {
                     int picked = codes.get(which);
                     if (picked == -1) {
@@ -885,7 +883,7 @@ public final class ButtonMapper {
                         if (onDone != null) onDone.run();
                     }
                 })
-                .setNegativeButton(I18n.s(a, "Cancel", "İptal"), null)
+                .setNegativeButton(I18n.t(a, "Cancel"), null)
                 .show();
     }
 
@@ -893,14 +891,14 @@ public final class ButtonMapper {
         android.widget.EditText in = new android.widget.EditText(a);
         in.setSingleLine(true);
         in.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        in.setHint(I18n.s(a, "e.g. 85 (Play/Pause), 164 (Mute), 178 (TV Input)", "örn. 85 (Oynat/Duraklat), 164 (Sessiz), 178 (TV Girişi)"));
+        in.setHint(I18n.t(a, "e.g. 85 (Play/Pause), 164 (Mute), 178 (TV Input)"));
         android.widget.FrameLayout box = new android.widget.FrameLayout(a);
         int pad = Math.round(16 * Ui.unit(a));
         box.setPadding(pad, pad / 2, pad, 0);
         box.addView(in);
-        AlertDialog dlg = themedDialog(a, I18n.s(a, "Enter Android Key Code", "Android Tuş Kodunu Girin"))
+        AlertDialog dlg = themedDialog(a, I18n.t(a, "Enter Android Key Code"))
                 .setView(box)
-                .setPositiveButton(I18n.s(a, "Save", "Kaydet"), (d, w) -> {
+                .setPositiveButton(I18n.t(a, "Save"), (d, w) -> {
                     try {
                         int customKc = Integer.parseInt(in.getText().toString().trim());
                         if (customKc > 0) {
@@ -909,7 +907,7 @@ public final class ButtonMapper {
                         }
                     } catch (Exception ignored) { }
                 })
-                .setNegativeButton(I18n.s(a, "Cancel", "İptal"), null)
+                .setNegativeButton(I18n.t(a, "Cancel"), null)
                 .show();
         Ui.setupDialogEditText(in, dlg);
         in.requestFocus();

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,12 +22,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 
 /**
- * Current weather and a 5-day forecast from free services that need no key: Open-Meteo,
- * MET Norway (Yr) and wttr.in. The chosen source is tried first and the others are fallbacks.
- * The location comes from the internet address (ipapi.co, ipwho.is, geojs.io) unless a city is
+ * Current weather and up to five days of forecasts from MET Norway, Open-Meteo and wttr.in.
+ * The chosen source is tried first and the others are fallbacks.
+ * The location comes from the internet address unless a city is
  * chosen in Settings. Every source is stored in one format, cached, and refreshed on a schedule
  * (every 15 minutes by default).
  */
@@ -35,10 +37,11 @@ final class Weather {
     static final String K_ENABLED = "enabled", K_UNITS = "units", K_PLACE = "place", K_LAT = "lat", K_LON = "lon",
             K_MANUAL = "manual", K_SOURCE = "source", K_REFRESH = "refresh_min",
             K_CACHE = "cache2", K_CACHE_AT = "cache_at", K_CACHE_KEY = "cache_key";
+    private static final String K_ZONE = "timezone", K_AUTO_LOCATION = "auto_location";
     static final String SRC_OPEN_METEO = "openmeteo", SRC_MET = "met", SRC_WTTR = "wttr";
-    static final String[] SOURCES = {SRC_OPEN_METEO, SRC_MET, SRC_WTTR};
+    static final String[] SOURCES = {SRC_MET, SRC_OPEN_METEO, SRC_WTTR};
     static final int[] REFRESH_CHOICES = {10, 15, 30, 60};
-    static final String UA = "tvOSLauncher/2.0 (Android TV launcher)";
+    static final String UA = "tvOSLauncher/2.1.6 (https://github.com/lemilleur/tvOS-Launcher)";
 
     private Weather() {
     }
@@ -55,7 +58,7 @@ final class Weather {
     static String units(Context c) {
         String u = prefs(c).getString(K_UNITS, "auto");
         if (!u.equals("auto")) return u;
-        String cc = Locale.getDefault().getCountry();
+        String cc = I18n.locale(c).getCountry();
         return cc.equals("US") || cc.equals("LR") || cc.equals("MM") ? "f" : "c";
     }
 
@@ -68,7 +71,9 @@ final class Weather {
     }
 
     static String source(Context c) {
-        return prefs(c).getString(K_SOURCE, SRC_OPEN_METEO);
+        String source = prefs(c).getString(K_SOURCE, SRC_MET);
+        for (String supported : SOURCES) if (supported.equals(source)) return source;
+        return SRC_MET;
     }
 
     static String sourceName(String s) {
@@ -83,6 +88,7 @@ final class Weather {
     /** Settings changed: the next refresh fetches again. */
     static void changed(Context c) {
         prefs(c).edit().remove(K_CACHE_AT).apply();
+        refresh(c, true, null);
     }
 
     // ---------------------------------------------------------------- data
@@ -100,16 +106,18 @@ final class Weather {
     }
 
     static final class Data {
-        String place = "", source = SRC_OPEN_METEO, windUnit = "km/h";
+        String place = "", source = SRC_OPEN_METEO, windUnit = "m/s", timezone = "";
         long fetchedAt;
         int temp, feels, code, humidity, wind, max, min;
         boolean day = true;
         final List<Hour> hours = new ArrayList<>();
         final List<Day> days = new ArrayList<>();
+        Day tomorrow;
 
         JSONObject toJson() throws Exception {
             JSONObject j = new JSONObject();
             j.put("place", place).put("source", source).put("windUnit", windUnit).put("fetchedAt", fetchedAt)
+                    .put("timezone", timezone)
                     .put("temp", temp).put("feels", feels).put("code", code).put("humidity", humidity)
                     .put("wind", wind).put("day", day);
             JSONArray h = new JSONArray();
@@ -129,6 +137,7 @@ final class Weather {
             d.place = j.optString("place");
             d.source = j.optString("source", SRC_OPEN_METEO);
             d.windUnit = j.optString("windUnit", "km/h");
+            d.timezone = j.optString("timezone");
             d.fetchedAt = j.optLong("fetchedAt");
             d.temp = j.getInt("temp");
             d.feels = j.optInt("feels", d.temp);
@@ -166,7 +175,9 @@ final class Weather {
      * today ("Today" first), and today's high/low. Null when nothing has loaded yet.
      */
     static Data cached(Context c) {
-        String raw = prefs(c).getString(K_CACHE, null);
+        SharedPreferences p = prefs(c);
+        if (!enabled(c) || !cacheMatchesLocation(c, p)) return null;
+        String raw = p.getString(K_CACHE, null);
         if (raw == null) return null;
         try {
             return present(c, Data.fromJson(new JSONObject(raw)));
@@ -175,38 +186,55 @@ final class Weather {
         }
     }
 
-    private static Data present(Context c, Data src) throws Exception {
-        Data d = Data.fromJson(src.toJson());
-        d.hours.clear();
-        d.days.clear();
-        long hourStart = localHourStart();
+    private static boolean cacheMatchesLocation(Context c, SharedPreferences p) {
+        String stored = p.getString(K_CACHE_KEY, "");
+        int sourceStart = stored.indexOf('|');
+        int locationStart = stored.indexOf('|', sourceStart + 1);
+        return sourceStart >= 0 && locationStart > sourceStart
+                && stored.substring(0, sourceStart).equals(units(c))
+                && stored.substring(locationStart + 1).equals(locationKey(c));
+    }
+
+    private static Data present(Context c, Data d) throws Exception {
+        TimeZone zone = timeZone(d.timezone);
+        Date now = new Date();
         SimpleDateFormat hourFmt = new SimpleDateFormat(
-                android.text.format.DateFormat.is24HourFormat(c) ? "HH" : "h a", I18n.locale(c));
-        for (Hour h : src.hours) {
-            if (h.time < hourStart || d.hours.size() >= 6) continue;
-            if (d.hours.isEmpty()) {
-                h.label = I18n.s(c, "Now", "Şimdi");
-                h.temp = d.temp;
-                h.code = d.code;
-                h.day = d.day;
-            } else {
-                h.label = hourFmt.format(new Date(h.time)).replace(" ", "").toUpperCase(I18n.locale(c));
-            }
-            d.hours.add(h);
+                android.text.format.DateFormat.is24HourFormat(c) ? "HH:mm" : "h a", I18n.locale(c));
+        hourFmt.setTimeZone(zone);
+        d.hours.removeIf(h -> h.time <= now.getTime());
+        for (Hour h : d.hours) {
+            h.label = hourFmt.format(new Date(h.time));
         }
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        Hour current = new Hour();
+        current.time = now.getTime();
+        current.label = I18n.t(c, "Now");
+        current.temp = d.temp;
+        current.code = d.code;
+        current.day = d.day;
+        d.hours.add(0, current);
+        if (d.hours.size() > 6) d.hours.subList(6, d.hours.size()).clear();
+
         SimpleDateFormat ymd = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        ymd.setTimeZone(zone);
         SimpleDateFormat dayFmt = new SimpleDateFormat("EEE", I18n.locale(c));
-        for (Day x : src.days) {
-            if (x.date.compareTo(today) < 0 || d.days.size() >= 5) continue;
-            x.label = d.days.isEmpty() ? I18n.s(c, "Today", "Bugün") : dayFmt.format(ymd.parse(x.date));
-            d.days.add(x);
-        }
-        if (!d.days.isEmpty()) {
-            d.max = Math.max(d.days.get(0).max, d.temp);
-            d.min = Math.min(d.days.get(0).min, d.temp);
-        } else {
-            d.max = d.min = d.temp;
+        dayFmt.setTimeZone(zone);
+        String today = ymd.format(now);
+        Calendar next = Calendar.getInstance(zone);
+        next.setTime(now);
+        next.add(Calendar.DATE, 1);
+        String tomorrow = ymd.format(next.getTime());
+        d.days.removeIf(day -> day.date.compareTo(today) < 0);
+        if (d.days.size() > 5) d.days.subList(5, d.days.size()).clear();
+        d.max = d.min = d.temp;
+        for (Day x : d.days) {
+            if (x.date.equals(today)) {
+                x.label = I18n.t(c, "Today");
+                d.max = Math.max(x.max, d.temp);
+                d.min = Math.min(x.min, d.temp);
+            } else {
+                x.label = dayFmt.format(ymd.parse(x.date));
+            }
+            if (x.date.equals(tomorrow)) d.tomorrow = x;
         }
         return d;
     }
@@ -218,60 +246,121 @@ final class Weather {
     }
 
     private static String key(Context c) {
-        return units(c) + "|" + source(c) + (manual(c) ? "|" + prefs(c).getFloat(K_LAT, 0) + "," + prefs(c).getFloat(K_LON, 0) : "|auto");
+        return units(c) + "|" + source(c) + "|" + locationKey(c);
+    }
+
+    private static String locationKey(Context c) {
+        SharedPreferences p = prefs(c);
+        return manual(c) ? p.getFloat(K_LAT, 0) + "," + p.getFloat(K_LON, 0) : "auto";
+    }
+
+    /** Rebinds weather shown in a view whenever the shared forecast or its display settings change. */
+    static void bind(View view, Runnable update) {
+        SharedPreferences p = prefs(view.getContext());
+        view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            private final SharedPreferences.OnSharedPreferenceChangeListener listener = (prefs, key) -> {
+                if (K_CACHE.equals(key) || K_ENABLED.equals(key) || K_UNITS.equals(key)
+                        || K_MANUAL.equals(key) || K_LAT.equals(key) || K_LON.equals(key)) update.run();
+            };
+
+            @Override public void onViewAttachedToWindow(View v) {
+                p.registerOnSharedPreferenceChangeListener(listener);
+                update.run();
+                refresh(v.getContext(), false, update);
+            }
+
+            @Override public void onViewDetachedFromWindow(View v) {
+                p.unregisterOnSharedPreferenceChangeListener(listener);
+            }
+        });
+        update.run();
     }
 
     private static boolean busy;
+    private static String attemptedKey;
+    private static long attemptedAt;
+    private static final List<Runnable> refreshCallbacks = new ArrayList<>();
+
+    static String status(Context c) {
+        return I18n.t(c, enabled(c) && (busy || !key(c).equals(attemptedKey))
+                ? "Getting the weather\u2026" : "Weather unavailable");
+    }
 
     /** Fetches in the background when the cache is due; {@code done} runs on the main thread. */
     static void refresh(Context ctx, boolean force, Runnable done) {
         Context c = ctx.getApplicationContext();
-        if (!enabled(c) || busy || (!force && !stale(c))) return;
+        if (!enabled(c) || (!force && !stale(c))) return;
+        String requestKey = key(c);
+        if (busy) {
+            if (done != null) refreshCallbacks.add(done);
+            return;
+        }
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (!force && requestKey.equals(attemptedKey) && now - attemptedAt < 60_000L) return;
+        attemptedKey = requestKey;
+        attemptedAt = now;
+        if (done != null) refreshCallbacks.add(done);
         busy = true;
         Handler main = new Handler(Looper.getMainLooper());
+        SharedPreferences p = prefs(c);
+        boolean isManual = manual(c);
+        Place selected = isManual ? new Place(p.getString(K_PLACE, ""), p.getFloat(K_LAT, 0),
+                p.getFloat(K_LON, 0), p.getString(K_ZONE, "")) : null;
+        String previousAutoLocation = p.getString(K_AUTO_LOCATION, "");
+        boolean f = units(c).equals("f");
+        String preferredSource = source(c);
         new Thread(() -> {
+            Place location = selected;
+            Data forecast = null;
             try {
-                SharedPreferences p = prefs(c);
-                double lat, lon;
-                String place;
-                if (manual(c)) {
-                    lat = p.getFloat(K_LAT, 0);
-                    lon = p.getFloat(K_LON, 0);
-                    place = p.getString(K_PLACE, "");
-                } else {
-                    double[] ll = new double[2];
-                    place = locate(ll);
-                    lat = ll[0];
-                    lon = ll[1];
-                }
-                boolean f = units(c).equals("f");
-                // The chosen source first, then the others.
+                if (!isManual) location = locate(previousAutoLocation);
                 List<String> order = new ArrayList<>();
-                order.add(source(c));
+                order.add(preferredSource);
                 for (String s : SOURCES) if (!order.contains(s)) order.add(s);
-                Data d = null;
                 for (String s : order) {
                     try {
-                        d = s.equals(SRC_MET) ? fetchMet(lat, lon, f) : s.equals(SRC_WTTR) ? fetchWttr(lat, lon, f)
-                                : fetchOpenMeteo(lat, lon, f);
+                        if (!s.equals(SRC_OPEN_METEO) && isManual && location.timezone.isEmpty()) {
+                            location = withGeocodedTimezone(c, location);
+                        }
+                        Data d = s.equals(SRC_MET) ? fetchMet(location, f)
+                                : s.equals(SRC_WTTR) ? fetchWttr(location, f) : fetchOpenMeteo(location, f);
+                        if (d.hours.isEmpty() || d.days.isEmpty()) throw new Exception("Empty forecast");
                         d.source = s;
+                        d.place = location.name.isEmpty() ? d.place : location.name;
+                        d.fetchedAt = System.currentTimeMillis();
+                        forecast = d;
                         break;
                     } catch (Exception ignored) {
                         // try the next source
                     }
                 }
-                if (d != null) {
-                    if (!place.isEmpty() || d.place.isEmpty()) d.place = place;
-                    d.fetchedAt = System.currentTimeMillis();
-                    p.edit().putString(K_CACHE, d.toJson().toString()).putString(K_PLACE, d.place)
-                            .putLong(K_CACHE_AT, d.fetchedAt).putString(K_CACHE_KEY, key(c)).apply();
-                }
             } catch (Exception ignored) {
                 // Keep showing the last forecast.
             }
+            Data result = forecast;
+            Place usedLocation = location;
             main.post(() -> {
                 busy = false;
-                if (done != null) done.run();
+                if (enabled(c) && !requestKey.equals(key(c))) {
+                    refresh(c, true, null);
+                    return;
+                }
+                if (result != null && enabled(c)) {
+                    try {
+                        SharedPreferences.Editor edit = p.edit().putString(K_CACHE, result.toJson().toString())
+                                .putLong(K_CACHE_AT, result.fetchedAt).putString(K_CACHE_KEY, requestKey);
+                        if (isManual) edit.putString(K_ZONE, result.timezone);
+                        else edit.putString(K_PLACE, result.place).putString(K_AUTO_LOCATION,
+                                new JSONObject().put("city", result.place).put("latitude", usedLocation.lat)
+                                        .put("longitude", usedLocation.lon).put("timezone", result.timezone).toString());
+                        edit.apply();
+                    } catch (Exception ignored) {
+                        // Leave the existing cache in place.
+                    }
+                }
+                List<Runnable> callbacks = new ArrayList<>(refreshCallbacks);
+                refreshCallbacks.clear();
+                for (Runnable callback : callbacks) callback.run();
             });
         }).start();
     }
@@ -279,24 +368,25 @@ final class Weather {
     // ---------------------------------------------------------------- sources
 
     /** Open-Meteo: hourly and daily forecast in the place's own time zone. */
-    private static Data fetchOpenMeteo(double lat, double lon, boolean f) throws Exception {
-        JSONObject j = new JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
+    private static Data fetchOpenMeteo(Place location, boolean f) throws Exception {
+        JSONObject j = new JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=" + location.lat + "&longitude=" + location.lon
                 + "&current=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m"
                 + "&hourly=temperature_2m,weather_code,is_day"
                 + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
                 + "&timezone=auto&forecast_days=6&forecast_hours=24"
-                + (f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "")));
+                + (f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "&wind_speed_unit=ms")));
         Data d = new Data();
-        d.windUnit = f ? "mph" : "km/h";
+        d.windUnit = f ? "mph" : "m/s";
+        d.timezone = j.getString("timezone");
         JSONObject cur = j.getJSONObject("current");
         d.temp = round(cur.getDouble("temperature_2m"));
         d.feels = round(cur.getDouble("apparent_temperature"));
         d.code = cur.getInt("weather_code");
-        d.day = cur.optInt("is_day", 1) == 1;
-        d.humidity = cur.optInt("relative_humidity_2m");
-        d.wind = round(cur.optDouble("wind_speed_10m", 0));
+        d.day = cur.getInt("is_day") == 1;
+        d.humidity = cur.getInt("relative_humidity_2m");
+        d.wind = round(cur.getDouble("wind_speed_10m"));
         SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
-        iso.setTimeZone(TimeZone.getTimeZone(j.optString("timezone", "UTC")));
+        iso.setTimeZone(new SimpleTimeZone(j.getInt("utc_offset_seconds") * 1000, d.timezone));
         JSONObject h = j.getJSONObject("hourly");
         JSONArray ht = h.getJSONArray("time");
         for (int i = 0; i < ht.length(); i++) {
@@ -322,19 +412,23 @@ final class Weather {
     }
 
     /** MET Norway (Yr) Locationforecast: UTC time series in \u00b0C and m/s; days grouped locally. */
-    private static Data fetchMet(double lat, double lon, boolean f) throws Exception {
-        JSONObject j = new JSONObject(get(String.format(Locale.US,
-                "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f", lat, lon)));
+    private static Data fetchMet(Place location, boolean f) throws Exception {
+        JSONObject j = new JSONObject(getMetForecast(String.format(Locale.US,
+                "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f", location.lat, location.lon)));
         JSONArray ts = j.getJSONObject("properties").getJSONArray("timeseries");
         SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
         iso.setTimeZone(TimeZone.getTimeZone("UTC"));
         SimpleDateFormat ymd = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         Data d = new Data();
-        d.windUnit = f ? "mph" : "km/h";
+        d.windUnit = f ? "mph" : "m/s";
+        TimeZone zone = timeZone(location.timezone);
+        d.timezone = location.timezone;
+        ymd.setTimeZone(zone);
+        Calendar cal = Calendar.getInstance(zone);
         long now = System.currentTimeMillis();
         Map<String, Day> days = new LinkedHashMap<>();
         Map<String, Long> noonGap = new LinkedHashMap<>();
-        boolean first = true;
+        long current = Long.MIN_VALUE;
         for (int i = 0; i < ts.length(); i++) {
             JSONObject e = ts.getJSONObject(i);
             long t = iso.parse(e.getString("time")).getTime();
@@ -343,22 +437,22 @@ final class Weather {
             double c = inst.getDouble("air_temperature");
             String sym = symbol(data, "next_1_hours");
             if (sym == null) sym = symbol(data, "next_6_hours");
-            if (first && t <= now + 3600000L) {
-                double ws = inst.optDouble("wind_speed", 0), rh = inst.optDouble("relative_humidity", 50);
+            if ((t <= now && t > current) || (current == Long.MIN_VALUE && t <= now + 3600000L)) {
+                double ws = inst.getDouble("wind_speed"), rh = inst.getDouble("relative_humidity");
                 d.temp = temp(c, f);
                 d.feels = temp(apparent(c, rh, ws), f);
                 d.humidity = (int) Math.round(rh);
-                d.wind = (int) Math.round(f ? ws * 2.237 : ws * 3.6);
+                d.wind = round(f ? ws * 2.237 : ws);
                 d.code = metCode(sym);
-                d.day = sym == null || !sym.contains("night");
-                first = false;
+                d.day = metDay(sym);
+                current = t;
             }
             if (t >= now - 3600000L && t <= now + 24 * 3600000L && data.has("next_1_hours")) {
                 Hour x = new Hour();
                 x.time = t;
                 x.temp = temp(c, f);
                 x.code = metCode(sym);
-                x.day = sym == null || !sym.contains("night");
+                x.day = metDay(sym);
                 d.hours.add(x);
             }
             String date = ymd.format(new Date(t));
@@ -374,7 +468,6 @@ final class Weather {
             day.max = Math.max(day.max, temp(c, f));
             day.min = Math.min(day.min, temp(c, f));
             // The day's weather: the symbol nearest midday.
-            Calendar cal = Calendar.getInstance();
             cal.setTimeInMillis(t);
             long gap = Math.abs(cal.get(Calendar.HOUR_OF_DAY) - 12);
             Long best = noonGap.get(date);
@@ -385,35 +478,46 @@ final class Weather {
                 day.code = metCode(daySym);
             }
         }
-        if (first) throw new Exception("No current data");
+        if (current < now - 6 * 3600000L) throw new Exception("No current data");
         d.days.addAll(days.values());
         return d;
     }
 
     /** wttr.in JSON: current conditions and 3 days in 3-hour steps, local time. */
-    private static Data fetchWttr(double lat, double lon, boolean f) throws Exception {
-        JSONObject j = new JSONObject(get(String.format(Locale.US, "https://wttr.in/%.4f,%.4f?format=j1", lat, lon)));
+    private static Data fetchWttr(Place location, boolean f) throws Exception {
+        JSONObject j = new JSONObject(get(String.format(Locale.US, "https://wttr.in/%.4f,%.4f?format=j1",
+                location.lat, location.lon)));
         JSONObject cur = j.getJSONArray("current_condition").getJSONObject(0);
         Data d = new Data();
-        d.windUnit = f ? "mph" : "km/h";
+        d.windUnit = f ? "mph" : "m/s";
+        TimeZone zone = timeZone(location.timezone);
+        d.timezone = location.timezone;
         d.temp = cur.getInt(f ? "temp_F" : "temp_C");
         d.feels = cur.optInt(f ? "FeelsLikeF" : "FeelsLikeC", d.temp);
-        d.humidity = cur.optInt("humidity");
-        d.wind = cur.optInt(f ? "windspeedMiles" : "windspeedKmph");
-        d.code = wwoCode(cur.optInt("weatherCode", 116));
-        int hourNow = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        d.day = hourNow >= 6 && hourNow < 18;
+        d.humidity = cur.getInt("humidity");
+        d.wind = f ? cur.getInt("windspeedMiles") : round(cur.getDouble("windspeedKmph") / 3.6);
+        d.code = wwoCode(cur.getInt("weatherCode"));
         try {
             d.place = j.getJSONArray("nearest_area").getJSONObject(0).getJSONArray("areaName").getJSONObject(0).getString("value");
         } catch (Exception ignored) {
             // no area name
         }
         SimpleDateFormat local = new SimpleDateFormat("yyyy-MM-dd HHmm", Locale.US);
+        local.setTimeZone(zone);
+        SimpleDateFormat ymd = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        ymd.setTimeZone(zone);
+        Date now = new Date();
+        String today = ymd.format(now);
         JSONArray w = j.getJSONArray("weather");
         for (int i = 0; i < w.length(); i++) {
             JSONObject o = w.getJSONObject(i);
             Day x = new Day();
             x.date = o.getString("date");
+            JSONArray astronomy = o.optJSONArray("astronomy");
+            JSONObject sun = astronomy == null ? null : astronomy.optJSONObject(0);
+            long sunrise = sunTime(local, x.date, sun, "sunrise", "0600");
+            long sunset = sunTime(local, x.date, sun, "sunset", "1800");
+            if (x.date.equals(today)) d.day = now.getTime() >= sunrise && now.getTime() < sunset;
             x.max = o.getInt(f ? "maxtempF" : "maxtempC");
             x.min = o.getInt(f ? "mintempF" : "mintempC");
             JSONArray hr = o.getJSONArray("hourly");
@@ -429,19 +533,30 @@ final class Weather {
                 hour.time = local.parse(x.date + " " + String.format(Locale.US, "%04d", hhmm)).getTime();
                 hour.temp = h.getInt(f ? "tempF" : "tempC");
                 hour.code = code;
-                hour.day = hhmm >= 600 && hhmm < 1800;
+                hour.day = hour.time >= sunrise && hour.time < sunset;
                 d.hours.add(hour);
             }
             d.days.add(x);
         }
-        // 3-hour steps: keep the step containing now as the first hour.
-        long now = System.currentTimeMillis();
-        List<Hour> keep = new ArrayList<>();
-        for (Hour h : d.hours) if (h.time + 3 * 3600000L > now) keep.add(h);
-        if (!keep.isEmpty()) keep.get(0).time = Math.max(keep.get(0).time, localHourStart());
-        d.hours.clear();
-        d.hours.addAll(keep);
         return d;
+    }
+
+    private static long sunTime(SimpleDateFormat local, String date, JSONObject sun, String key,
+                                String fallback) throws Exception {
+        if (sun != null) {
+            try {
+                SimpleDateFormat clock = new SimpleDateFormat("yyyy-MM-dd hh:mm a", Locale.US);
+                clock.setTimeZone(local.getTimeZone());
+                return clock.parse(date + " " + sun.getString(key)).getTime();
+            } catch (Exception ignored) {
+                // Some locations have no sunrise or sunset on this date.
+            }
+        }
+        return local.parse(date + " " + fallback).getTime();
+    }
+
+    private static boolean metDay(String symbol) {
+        return symbol == null || (!symbol.endsWith("_night") && !symbol.endsWith("_polartwilight"));
     }
 
     private static String symbol(JSONObject data, String period) {
@@ -456,7 +571,7 @@ final class Weather {
         String s = sym.replace("_day", "").replace("_night", "").replace("_polartwilight", "");
         if (s.contains("thunder")) return 95;
         if (s.contains("snow")) return s.startsWith("heavy") ? 75 : s.startsWith("light") ? 71 : 73;
-        if (s.contains("sleet")) return 66;
+        if (s.contains("sleet")) return 68;
         if (s.contains("rain")) {
             if (s.contains("showers")) return s.startsWith("heavy") ? 82 : 80;
             return s.startsWith("heavy") ? 65 : s.startsWith("light") ? 61 : 63;
@@ -482,8 +597,9 @@ final class Weather {
             case 179: case 227: case 323: case 326: case 368: return 71;
             case 329: case 332: case 335: case 371: return 73;
             case 230: case 338: case 392: case 395: return 75;
-            case 182: case 185: case 281: case 284: case 311: case 314: case 317: case 320:
-            case 350: case 362: case 365: case 374: case 377: return 66;
+            case 185: case 281: case 284: return 56;
+            case 311: case 314: return 66;
+            case 182: case 317: case 320: case 350: case 362: case 365: case 374: case 377: return 68;
             case 200: case 386: case 389: return 95;
             default: return 3;
         }
@@ -495,13 +611,10 @@ final class Weather {
         return t + 0.33 * e - 0.70 * ws - 4.00;
     }
 
-    /** Start of the current hour in local time (half-hour time zones such as India included). */
-    static long localHourStart() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTimeInMillis();
+    static TimeZone timeZone(String id) {
+        if (id == null || id.isEmpty()) return TimeZone.getDefault();
+        TimeZone zone = TimeZone.getTimeZone(id);
+        return "GMT".equals(zone.getID()) && !"GMT".equals(id) ? TimeZone.getDefault() : zone;
     }
 
     private static int temp(double celsius, boolean f) {
@@ -514,48 +627,90 @@ final class Weather {
 
     // ---------------------------------------------------------------- location
 
-    /** Approximate location from the internet address; returns the city name. */
-    private static String locate(double[] out) throws Exception {
-        String[] services = {"https://ipapi.co/json/", "https://ipwho.is/", "https://get.geojs.io/v1/ip/geo.json"};
+    /** Approximate location from the internet address, with the last successful lookup as fallback. */
+    private static Place locate(String previous) throws Exception {
+        String[] services = {"https://ipwho.is/", "https://get.geojs.io/v1/ip/geo.json", "https://ipapi.co/json/"};
         Exception last = null;
+        Place withoutZone = null;
         for (String url : services) {
             try {
-                JSONObject j = new JSONObject(get(url));
-                if (!j.has("latitude") || j.optBoolean("error") || !j.optBoolean("success", true)) continue;
-                out[0] = Double.parseDouble(j.getString("latitude"));
-                out[1] = Double.parseDouble(j.getString("longitude"));
-                return j.optString("city", "");
+                Place place = parseLocation(new JSONObject(get(url)));
+                if (!place.timezone.isEmpty()) return place;
+                if (withoutZone == null) withoutZone = place;
             } catch (Exception e) {
                 last = e;
             }
         }
+        if (withoutZone != null) return withoutZone;
+        if (!previous.isEmpty()) return parseLocation(new JSONObject(previous));
         throw last != null ? last : new Exception("No location");
     }
 
+    private static Place parseLocation(JSONObject j) throws Exception {
+        if (j.optBoolean("error") || !j.optBoolean("success", true)) throw new Exception("No location");
+        double lat = j.getDouble("latitude"), lon = j.getDouble("longitude");
+        if (!Double.isFinite(lat) || !Double.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+            throw new Exception("Invalid location");
+        }
+        JSONObject nested = j.optJSONObject("timezone");
+        String zone = nested == null ? j.optString("timezone") : nested.optString("id");
+        return new Place(j.optString("city"), lat, lon, zone);
+    }
+
     static final class Place {
-        String name, detail;
-        double lat, lon;
+        final String name, timezone;
+        final double lat, lon;
+        String detail = "";
+
+        Place(String name, double lat, double lon, String timezone) {
+            this.name = name;
+            this.lat = lat;
+            this.lon = lon;
+            this.timezone = timezone;
+        }
     }
 
     /** City search for Settings (Open-Meteo geocoding). Call off the main thread. */
-    static List<Place> search(String q) throws Exception {
-        JSONObject j = new JSONObject(get("https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&name="
-                + URLEncoder.encode(q.trim(), "UTF-8")));
+    static List<Place> search(Context c, String q) throws Exception {
+        String language = I18n.locale(c).getLanguage();
+        String name = q.trim();
+        String url = "https://geocoding-api.open-meteo.com/v1/search?count=8&language=" + language
+                + "&name=" + URLEncoder.encode(name, "UTF-8");
+        if ("ru".equals(language) && !name.contains(",")) {
+            List<Place> russian = searchPlaces(url + "&countryCode=RU");
+            if (!russian.isEmpty()) return russian;
+        }
+        return searchPlaces(url);
+    }
+
+    private static Place withGeocodedTimezone(Context c, Place saved) {
+        try {
+            for (Place match : search(c, saved.name)) {
+                if (Math.abs(match.lat - saved.lat) < 0.1 && Math.abs(match.lon - saved.lon) < 0.1) {
+                    return new Place(saved.name, saved.lat, saved.lon, match.timezone);
+                }
+            }
+        } catch (Exception ignored) {
+            // Continue with the device time zone if geocoding is temporarily unavailable.
+        }
+        return saved;
+    }
+
+    private static List<Place> searchPlaces(String url) throws Exception {
+        JSONObject j = new JSONObject(get(url));
         List<Place> out = new ArrayList<>();
         JSONArray a = j.optJSONArray("results");
         if (a == null) return out;
         for (int i = 0; i < a.length(); i++) {
             JSONObject r = a.getJSONObject(i);
-            Place pl = new Place();
-            pl.name = r.optString("name");
+            Place pl = new Place(r.getString("name"), r.getDouble("latitude"), r.getDouble("longitude"),
+                    r.optString("timezone"));
             StringBuilder d = new StringBuilder();
             for (String k : new String[]{"admin1", "country"}) {
                 String v = r.optString(k, "");
                 if (!v.isEmpty()) d.append(d.length() > 0 ? ", " : "").append(v);
             }
             pl.detail = d.toString();
-            pl.lat = r.getDouble("latitude");
-            pl.lon = r.getDouble("longitude");
             out.add(pl);
         }
         return out;
@@ -563,9 +718,9 @@ final class Weather {
 
     static void setPlace(Context c, Place pl) {
         SharedPreferences.Editor e = prefs(c).edit();
-        if (pl == null) e.putBoolean(K_MANUAL, false);
+        if (pl == null) e.putBoolean(K_MANUAL, false).remove(K_PLACE).remove(K_ZONE);
         else e.putBoolean(K_MANUAL, true).putString(K_PLACE, pl.name)
-                .putFloat(K_LAT, (float) pl.lat).putFloat(K_LON, (float) pl.lon);
+                .putFloat(K_LAT, (float) pl.lat).putFloat(K_LON, (float) pl.lon).putString(K_ZONE, pl.timezone);
         e.remove(K_CACHE_AT).apply();
     }
 
@@ -577,77 +732,69 @@ final class Weather {
             case 2: return "Partly Cloudy";
             case 3: return "Cloudy";
             case 45: case 48: return "Foggy";
-            case 51: case 53: case 55: case 56: case 57: return "Drizzle";
+            case 51: case 53: case 55: return "Drizzle";
+            case 56: case 57: return "Freezing Drizzle";
             case 61: case 63: case 80: case 81: return "Rain";
             case 65: case 82: return "Heavy Rain";
-            case 66: case 67: return "Sleet";
+            case 66: case 67: return "Freezing Rain";
+            case 68: return "Sleet";
             case 71: case 73: case 75: case 77: case 85: case 86: return "Snow";
             case 95: case 96: case 99: return "Thunderstorms";
-            default: return "";
+            default: return "Weather unavailable";
         }
     }
 
     static String describe(Context c, int code, boolean day) {
-        if (!I18n.isTr(c)) return I18n.t(c, describe(code, day));
-        switch (code) {
-            case 0: return day ? "Güneşli" : "Açık";
-            case 1: return day ? "Çoğunlukla Güneşli" : "Çoğunlukla Açık";
-            case 2: return "Parçalı Bulutlu";
-            case 3: return "Bulutlu";
-            case 45: case 48: return "Sisli";
-            case 51: case 53: case 55: case 56: case 57: return "Çiseleme";
-            case 61: case 63: case 80: case 81: return "Yağmurlu";
-            case 65: case 82: return "Şiddetli Yağmur";
-            case 66: case 67: return "Karla Karışık Yağmur";
-            case 71: case 73: case 75: case 77: case 85: case 86: return "Karlı";
-            case 95: case 96: case 99: return "Fırtına";
-            default: return "";
+        return I18n.t(c, describe(code, day));
+    }
+
+    private static String metUrl, metResponse, metLastModified;
+    private static long metExpires;
+
+    private static String getMetForecast(String url) throws Exception {
+        boolean sameLocation = url.equals(metUrl);
+        long now = System.currentTimeMillis();
+        if (sameLocation && now < metExpires) return metResponse;
+        HttpURLConnection con = connect(url);
+        if (sameLocation && metLastModified != null) con.setRequestProperty("If-Modified-Since", metLastModified);
+        try {
+            if (con.getResponseCode() != HttpURLConnection.HTTP_NOT_MODIFIED) {
+                metResponse = read(con);
+                metUrl = url;
+                metLastModified = con.getHeaderField("Last-Modified");
+            }
+            long expires = con.getHeaderFieldDate("Expires", 0);
+            metExpires = expires > now ? expires : now + 3 * 3600000L;
+            return metResponse;
+        } finally {
+            con.disconnect();
         }
     }
 
-    private static String get(String url) throws Exception {
+    private static HttpURLConnection connect(String url) throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setConnectTimeout(8000);
         con.setReadTimeout(10000);
         con.setRequestProperty("User-Agent", UA);
+        return con;
+    }
+
+    private static String get(String url) throws Exception {
+        HttpURLConnection con = connect(url);
+        try {
+            return read(con);
+        } finally {
+            con.disconnect();
+        }
+    }
+
+    private static String read(HttpURLConnection con) throws Exception {
         try (InputStream in = con.getInputStream()) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] b = new byte[8192];
             int n;
             while ((n = in.read(b)) > 0) out.write(b, 0, n);
             return out.toString("UTF-8");
-        } finally {
-            con.disconnect();
-        }
-    }
-
-    static final int ICON_SUN = 0;
-    static final int ICON_PARTLY = 1;
-    static final int ICON_CLOUD = 2;
-    static final int ICON_RAIN = 3;
-    static final int ICON_SNOW = 4;
-    static final int ICON_STORM = 5;
-
-    static int iconType(int code) {
-        switch (code) {
-            case 0:
-            case 1:
-                return ICON_SUN;
-            case 2:
-                return ICON_PARTLY;
-            case 3:
-            case 45:
-            case 48:
-                return ICON_CLOUD;
-            case 51: case 53: case 55: case 56: case 57:
-            case 61: case 63: case 65: case 80: case 81: case 82:
-                return ICON_RAIN;
-            case 66: case 67: case 71: case 73: case 75: case 77: case 85: case 86:
-                return ICON_SNOW;
-            case 95: case 96: case 99:
-                return ICON_STORM;
-            default:
-                return ICON_PARTLY;
         }
     }
 
@@ -659,53 +806,26 @@ final class Weather {
         return describe(c, code, true);
     }
 
-    static final class WeatherIconView extends android.view.View {
-        private int type = ICON_PARTLY;
-        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+    static final class WeatherIconView extends View {
+        private int code = -1;
+        private boolean day = true;
 
         WeatherIconView(Context c) {
             super(c);
         }
 
-        void setType(int t) {
-            this.type = t;
+        void setConditions(int code, boolean day) {
+            this.code = code;
+            this.day = day;
             invalidate();
         }
 
         @Override
-        protected void onDraw(android.graphics.Canvas cv) {
-            super.onDraw(cv);
-            float w = getWidth(), h = getHeight();
-            if (w <= 0 || h <= 0) return;
-            float cx = w * 0.5f, cy = h * 0.5f;
-            float r = Math.min(w, h) * 0.28f;
-            p.setStyle(android.graphics.Paint.Style.FILL);
-            if (type == ICON_SUN) {
-                p.setColor(0xFFFFCC00);
-                cv.drawCircle(cx, cy, r * 1.15f, p);
-            } else if (type == ICON_PARTLY) {
-                p.setColor(0xFFFFCC00);
-                cv.drawCircle(cx - r * 0.35f, cy - r * 0.25f, r * 0.85f, p);
-                p.setColor(0xFFE5E7EB);
-                cv.drawRoundRect(cx - r * 0.9f, cy - r * 0.1f, cx + r * 1.1f, cy + r * 0.85f, r * 0.5f, r * 0.5f, p);
-            } else {
-                p.setColor(type == ICON_STORM ? 0xFF9CA3AF : 0xFFE5E7EB);
-                cv.drawRoundRect(cx - r * 1.05f, cy - r * 0.45f, cx + r * 1.05f, cy + r * 0.45f, r * 0.5f, r * 0.5f, p);
-                cv.drawCircle(cx - r * 0.3f, cy - r * 0.35f, r * 0.55f, p);
-                cv.drawCircle(cx + r * 0.3f, cy - r * 0.25f, r * 0.45f, p);
-                if (type == ICON_RAIN || type == ICON_STORM) {
-                    p.setColor(type == ICON_STORM ? 0xFFFBBF24 : 0xFF38BDF8);
-                    p.setStrokeWidth(Math.max(2f, r * 0.18f));
-                    cv.drawLine(cx - r * 0.4f, cy + r * 0.55f, cx - r * 0.55f, cy + r * 1.0f, p);
-                    cv.drawLine(cx + r * 0.1f, cy + r * 0.55f, cx - r * 0.05f, cy + r * 1.0f, p);
-                    cv.drawLine(cx + r * 0.6f, cy + r * 0.55f, cx + r * 0.45f, cy + r * 1.0f, p);
-                } else if (type == ICON_SNOW) {
-                    p.setColor(0xFFFFFFFF);
-                    cv.drawCircle(cx - r * 0.4f, cy + r * 0.78f, r * 0.15f, p);
-                    cv.drawCircle(cx + r * 0.1f, cy + r * 0.82f, r * 0.15f, p);
-                    cv.drawCircle(cx + r * 0.6f, cy + r * 0.78f, r * 0.15f, p);
-                }
-            }
+        protected void onDraw(android.graphics.Canvas canvas) {
+            int size = Math.min(getWidth(), getHeight());
+            if (code < 0 || size <= 0) return;
+            canvas.drawBitmap(WeatherIcons.get(code, day, size),
+                    (getWidth() - size) / 2f, (getHeight() - size) / 2f, null);
         }
     }
 }

@@ -172,7 +172,7 @@ public final class HomeDashboard {
         return isEnabled(c) && (isWidgetPrayerEnabled(c)
                 || isWidgetFootballEnabled(c)
                 || isWidgetReleasesEnabled(c)
-                || isWidgetWeatherEnabled(c));
+                || (isWidgetWeatherEnabled(c) && Weather.enabled(c)));
     }
 
     public static boolean isAnyEnabled(Context c) {
@@ -924,7 +924,7 @@ public final class HomeDashboard {
         if (isWidgetReleasesEnabled(host)) {
             cards.add(createReleasesWidgetCard(host));
         }
-        if (isWidgetWeatherEnabled(host)) {
+        if (isWidgetWeatherEnabled(host) && Weather.enabled(host)) {
             cards.add(createWeatherWidgetCard(host, nav));
         }
         if (outCards != null) {
@@ -1527,29 +1527,29 @@ public final class HomeDashboard {
                 Weather.Data w = Weather.cached(host);
                 if (w == null) {
                     tempTv.setText("--°");
-                    condTv.setText(I18n.t(host, "weather_updating"));
+                    condTv.setText(Weather.status(host));
+                    iconView.setConditions(-1, true);
                     cityTv.setText("");
                     forecastSummaryTv.setText("");
                     return;
                 }
                 cityTv.setText(w.place != null ? w.place : "");
-                iconView.setType(Weather.iconType(w.code));
+                iconView.setConditions(w.code, w.day);
                 tempTv.setText(Weather.formatTemp(host, w.temp));
-                condTv.setText(Weather.codeText(host, w.code));
-                if (w.days != null && w.days.size() > 1 && w.days.get(1) != null) {
-                    Weather.Day tm = w.days.get(1);
+                condTv.setText(Weather.describe(host, w.code, w.day));
+                if (w.tomorrow != null) {
+                    Weather.Day tm = w.tomorrow;
                     forecastSummaryTv.setText(I18n.t(host, "tomorrow_short") + ": "
                             + Weather.codeText(host, tm.code) + "  "
                             + Weather.formatTemp(host, tm.max) + " / " + Weather.formatTemp(host, tm.min));
-                } else if (w.days != null && !w.days.isEmpty() && w.days.get(0) != null) {
-                    Weather.Day td = w.days.get(0);
-                    forecastSummaryTv.setText("H: " + Weather.formatTemp(host, td.max)
-                            + "  L: " + Weather.formatTemp(host, td.min));
+                } else {
+                    forecastSummaryTv.setText(I18n.t(host, "H:") + " " + Weather.formatTemp(host, w.max)
+                            + "  " + I18n.t(host, "L:") + " " + Weather.formatTemp(host, w.min));
                 }
             }
         };
 
-        bindWeather.run();
+        Weather.bind(card, bindWeather);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

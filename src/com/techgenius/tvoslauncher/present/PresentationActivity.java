@@ -170,7 +170,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
             }
 
             @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
-                if (r.isForMainFrame()) showError("Webpage failed to load: " + e.getDescription(), current());
+                if (r.isForMainFrame()) showError("Не удалось загрузить страницу: " + e.getDescription(), current());
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
@@ -257,13 +257,13 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
         icon.setBackground(shape);
         col.addView(icon, new LinearLayout.LayoutParams(u(150), u(90)));
         TextView t = label(26, "semibold", 1f);
-        t.setText("Nothing to present yet");
+        t.setText("Пока нечего показывать");
         t.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tl.topMargin = u(20);
         col.addView(t, tl);
         TextView b = label(14, "regular", 0.7f);
-        b.setText("Add images, videos or webpages from a phone or computer on the same Wi-Fi.");
+        b.setText("Добавьте изображения, видео или веб-страницы с телефона или ПК в той же сети Wi-Fi.");
         b.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(u(460), ViewGroup.LayoutParams.WRAP_CONTENT);
         bl.topMargin = u(6);
@@ -276,7 +276,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
         return v;
     }
 
-    /** tvOS-style card: QR, "Send to this TV", address and PIN. */
+    /** tvOS-style card: QR, "Отправить на телевизор", address and PIN. */
     View buildConnectionCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
@@ -298,14 +298,14 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
         text.setOrientation(LinearLayout.VERTICAL);
         text.setPadding(u(18), 0, 0, 0);
         TextView t = label(17, "semibold", 1f);
-        t.setText("Send to this TV");
+        t.setText("Отправить на телевизор");
         TextView sub = label(11.5f, "regular", 0.65f);
-        sub.setText("Scan the code or open this address on a phone or computer on the same Wi-Fi.");
+        sub.setText("Отсканируйте код или откройте этот адрес на телефоне или ПК в той же сети Wi-Fi.");
         sub.setMaxWidth(u(300));
         TextView addr = label(15, "medium", 1f);
         addr.setText(url.replace("http://", ""));
         TextView pinL = label(11, "medium", 0.55f);
-        pinL.setText("PAIRING CODE");
+        pinL.setText("КОД ПОДКЛЮЧЕНИЯ");
         pinL.setLetterSpacing(0.08f);
         TextView pin = label(24, "semibold", 1f);
         String p = Presenter.pin(this);
@@ -357,7 +357,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
                     finish();
                 } else {
                     backPressedAt = now;
-                    badge("Press Back again to exit");
+                    badge("Нажмите «Назад» ещё раз для выхода");
                 }
                 return true;
             default:
@@ -410,7 +410,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
                     if (isAutoScrollSlide()) startAutoScroll(false);
                     else if (current() != null && !Model.VIDEO.equals(current().type)) schedule();
                     setState("playing");
-                    badge("\u25b6  Playing");
+                    badge("\u25b6  Воспроизведение");
                 }
                 break;
             case "pause":
@@ -420,7 +420,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
                 handler.removeCallbacks(scrollStep);
                 if (mediaPlayer != null && mediaPlayer.isPlaying()) mediaPlayer.pause();
                 setState("paused");
-                badge("\u275a\u275a  Paused");
+                badge("\u275a\u275a  Пауза");
                 break;
             case "next":
                 next();
@@ -507,13 +507,13 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
             mp.setOnErrorListener((p, what, extra) -> {
                 Model.Slide cur = current();
                 if (cur != null && Model.VIDEO.equals(cur.type) && mediaPlayer == p) {
-                    showError("Video failed: " + m.displayName + "\nMedia error " + what + " (" + extra + ")", cur);
+                    showError("Ошибка воспроизведения видео: " + m.displayName + "\nОшибка мультимедиа " + what + " (" + extra + ")", cur);
                 }
                 return true;
             });
             mp.prepareAsync();
         } catch (Exception e) {
-            showError("Video failed: " + m.displayName + "\n" + e.getMessage(), s);
+            showError("Ошибка воспроизведения видео: " + m.displayName + "\n" + e.getMessage(), s);
             return;
         }
         reveal(videoView);
@@ -538,7 +538,7 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
     void showWebpage(Model.Slide s) {
         String url = s.url == null ? "" : s.url;
         if (url.trim().isEmpty()) {
-            showError("Webpage slide is missing a URL", s);
+            showError("У слайда нет адреса веб-страницы", s);
             return;
         }
         activeWebpageSlideId = s.id;
@@ -555,12 +555,12 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
 
     Model.Media resolveMedia(Model.Slide s) {
         if (s.mediaId == null || s.mediaId.trim().isEmpty()) {
-            showError(s.type + " slide is missing media", s);
+            showError(s.type + " — файл слайда отсутствует", s);
             return null;
         }
         Model.Media m = Presenter.repo(this).getMedia(s.mediaId);
         if (m == null || !Presenter.repo(this).file(m).exists()) {
-            showError("Media file is missing for slide", s);
+            showError("Файл слайда отсутствует", s);
             return null;
         }
         return m;
@@ -608,13 +608,13 @@ public class PresentationActivity extends Activity implements AdminServer.Gatewa
             status.playlistId = playlist == null ? null : playlist.id;
             status.playlistName = playlist == null ? null : playlist.name;
             status.slideCount = 0;
-            status.error = "No enabled slides in the active playlist";
+            status.error = "В текущем плейлисте нет включённых слайдов";
         }
     }
 
     void showError(String message, Model.Slide s) {
         hideSurfaces();
-        messageTitle.setText("Skipping this slide");
+        messageTitle.setText("Слайд пропущен");
         messageBody.setText(message);
         messageCard.setVisibility(View.VISIBLE);
         synchronized (statusLock) {

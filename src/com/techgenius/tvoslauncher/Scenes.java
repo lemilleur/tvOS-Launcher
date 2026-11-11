@@ -44,7 +44,7 @@ public final class Scenes {
     public static final int MAX_CUSTOM_SCENES = 5;
     public static final String[] CUSTOM_IDS = {"custom", "custom_2", "custom_3", "custom_4", "custom_5"};
     public static final String FOLDER_SHUFFLE_ID = "folder_shuffle";
-    public static final String REDDIT_WALLPAPER_ID = "reddit_wall";
+    public static final String ONLINE_WALLPAPER_ID = "reddit_wall";
     public static final String LOCK_CUSTOM_ID = "lock_custom";
     public static final String LOCK_FOLDER_SHUFFLE_ID = "lock_folder_shuffle";
 
@@ -103,7 +103,7 @@ public final class Scenes {
         }
 
         public String title(Context c) {
-            return I18n.s(c, nameEn, nameTr);
+            return I18n.t(c, nameEn);
         }
     }
 
@@ -157,8 +157,8 @@ public final class Scenes {
             68f, 190f, 48f,
             45f, 52f, false);
 
-    public static final Spec REDDIT_WALLPAPER_SPEC = new Spec(
-            REDDIT_WALLPAPER_ID, "Reddit Wallpapers", "Reddit Duvar Kağıtları",
+    public static final Spec ONLINE_WALLPAPER_SPEC = new Spec(
+            ONLINE_WALLPAPER_ID, "Online Wallpapers", "Online Wallpapers",
             null, null, null,
             false, false, false,
             68f, 190f, 48f,
@@ -211,7 +211,7 @@ public final class Scenes {
         String base = baseSceneId(id);
         return customSlotFromId(base) > 0
                 || FOLDER_SHUFFLE_ID.equals(base)
-                || REDDIT_WALLPAPER_ID.equals(base)
+                || ONLINE_WALLPAPER_ID.equals(base)
                 || LOCK_CUSTOM_ID.equals(base)
                 || LOCK_FOLDER_SHUFFLE_ID.equals(base)
                 || base.startsWith("photo:")
@@ -231,9 +231,9 @@ public final class Scenes {
         return getEnabledSceneIdsRaw(c).contains(FOLDER_SHUFFLE_ID);
     }
 
-    public static boolean isRedditWallpaperSelected(Context c) {
+    public static boolean isOnlineWallpaperSelected(Context c) {
         if (c == null) return false;
-        return getEnabledSceneIdsRaw(c).contains(REDDIT_WALLPAPER_ID);
+        return getEnabledSceneIdsRaw(c).contains(ONLINE_WALLPAPER_ID);
     }
 
     public static void setSelected(Context c, Object idOrIdx) {
@@ -284,7 +284,7 @@ public final class Scenes {
                     null, null, null, false, false, false, 68f, 190f, 48f, 45f, 52f, false);
         }
         if (FOLDER_SHUFFLE_ID.equals(id)) return FOLDER_SHUFFLE_SPEC;
-        if (REDDIT_WALLPAPER_ID.equals(id)) return REDDIT_WALLPAPER_SPEC;
+        if (ONLINE_WALLPAPER_ID.equals(id)) return ONLINE_WALLPAPER_SPEC;
         if (LOCK_CUSTOM_ID.equals(id)) return LOCK_CUSTOM_SPEC;
         if (LOCK_FOLDER_SHUFFLE_ID.equals(id)) return LOCK_FOLDER_SHUFFLE_SPEC;
         if (id.startsWith("photo:")) {
@@ -367,7 +367,7 @@ public final class Scenes {
         int pct = getDockScalePercent(c);
         int diff = pct - 100;
         if (diff == 0) {
-            return "100% (" + I18n.s(c, "Default", "Varsayılan") + ")";
+            return "100% (" + I18n.t(c, "Default") + ")";
         } else if (diff > 0) {
             return pct + "% (+" + diff + "%)";
         } else {
@@ -395,8 +395,8 @@ public final class Scenes {
         if (!out.contains(FOLDER_SHUFFLE_ID)) {
             out.add(FOLDER_SHUFFLE_ID);
         }
-        if (!out.contains(REDDIT_WALLPAPER_ID)) {
-            out.add(REDDIT_WALLPAPER_ID);
+        if (!out.contains(ONLINE_WALLPAPER_ID)) {
+            out.add(ONLINE_WALLPAPER_ID);
         }
         return out;
     }
@@ -424,8 +424,8 @@ public final class Scenes {
         boolean customModeOn = CustomMedia.isCustomWallpaperEnabled(c, CustomMedia.SCOPE_SCENE);
         int customSubMode = CustomMedia.getCustomWallpaperSubMode(c, CustomMedia.SCOPE_SCENE);
         if (customModeOn) {
-            if (customSubMode == CustomMedia.CUSTOM_MODE_REDDIT) {
-                return Collections.singletonList(REDDIT_WALLPAPER_ID);
+            if (customSubMode == CustomMedia.CUSTOM_MODE_ONLINE) {
+                return Collections.singletonList(ONLINE_WALLPAPER_ID);
             }
             if (customSubMode == CustomMedia.CUSTOM_MODE_FOLDER_SHUFFLE
                     && CustomMedia.hasWallpaperShuffleFolder(c, CustomMedia.SCOPE_SCENE)) {
@@ -449,8 +449,8 @@ public final class Scenes {
                     continue;
                 }
             }
-            if (REDDIT_WALLPAPER_ID.equals(p)) {
-                if (!customModeOn || customSubMode != CustomMedia.CUSTOM_MODE_REDDIT) {
+            if (ONLINE_WALLPAPER_ID.equals(p)) {
+                if (!customModeOn || customSubMode != CustomMedia.CUSTOM_MODE_ONLINE) {
                     continue;
                 }
             }
@@ -494,7 +494,7 @@ public final class Scenes {
         if (CustomMedia.isCustomWallpaperEnabled(c, CustomMedia.SCOPE_SCENE)) return true;
         List<String> enabled = getEnabledSceneIds(c);
         for (String id : enabled) {
-            if (customSlotFromId(id) > 0 || FOLDER_SHUFFLE_ID.equals(id) || REDDIT_WALLPAPER_ID.equals(id)) {
+            if (customSlotFromId(id) > 0 || FOLDER_SHUFFLE_ID.equals(id) || ONLINE_WALLPAPER_ID.equals(id)) {
                 return true;
             }
         }
@@ -765,9 +765,9 @@ public final class Scenes {
 
     public static String lockClockPosLabel(Context c) {
         String pos = getLockClockPos(c);
-        if (CLOCK_POS_LEFT.equals(pos)) return I18n.s(c, "Left", "Sol");
-        if (CLOCK_POS_RIGHT.equals(pos)) return I18n.s(c, "Right", "Sağ");
-        return I18n.s(c, "Center", "Orta");
+        if (CLOCK_POS_LEFT.equals(pos)) return I18n.t(c, "Left");
+        if (CLOCK_POS_RIGHT.equals(pos)) return I18n.t(c, "Right");
+        return I18n.t(c, "Center");
     }
 
     public static int getLockIdleMinutes(Context c) {
@@ -793,8 +793,8 @@ public final class Scenes {
 
     public static String lockIdleLabel(Context c) {
         int m = getLockIdleMinutes(c);
-        if (m <= 0) return I18n.s(c, "Off", "Kapalı");
-        return m + " " + I18n.s(c, "min", "dk");
+        if (m <= 0) return I18n.t(c, "Off");
+        return m + " " + I18n.t(c, "min");
     }
 
     public static int getStaySeconds(Context c) {
@@ -863,9 +863,9 @@ public final class Scenes {
 
     public static String clockStyleLabel(Context c) {
         String st = getClockStyle(c);
-        if (CLOCK_STYLE_ROUNDED.equals(st)) return I18n.s(c, "iPhone Rounded", "iPhone Yuvarlak");
-        if (CLOCK_STYLE_TALL.equals(st)) return I18n.s(c, "Tall Glass", "Uzun Cam");
-        return I18n.s(c, "iPhone Duo", "iPhone Duo");
+        if (CLOCK_STYLE_ROUNDED.equals(st)) return I18n.t(c, "iPhone Rounded");
+        if (CLOCK_STYLE_TALL.equals(st)) return I18n.t(c, "Tall Glass");
+        return I18n.t(c, "iPhone Duo");
     }
 
     private static InputStream openAssetStream(Context c, String assetPath) throws java.io.IOException {
@@ -1068,11 +1068,11 @@ public final class Scenes {
             }
         }
 
-        public void onRedditWallpaperUpdated() {
+        public void onOnlineWallpaperUpdated() {
             java.util.Iterator<Map.Entry<String, LoadedScene>> it = cache.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, LoadedScene> e = it.next();
-                if (REDDIT_WALLPAPER_ID.equals(baseSceneId(e.getKey()))) {
+                if (ONLINE_WALLPAPER_ID.equals(baseSceneId(e.getKey()))) {
                     LoadedScene ls = e.getValue();
                     if (ls != null) ls.recycle();
                     it.remove();
@@ -1109,7 +1109,7 @@ public final class Scenes {
             }
             if (FOLDER_SHUFFLE_ID.equals(baseSceneId(currentId))
                     || LOCK_FOLDER_SHUFFLE_ID.equals(baseSceneId(currentId))
-                    || REDDIT_WALLPAPER_ID.equals(baseSceneId(currentId))) {
+                    || ONLINE_WALLPAPER_ID.equals(baseSceneId(currentId))) {
                 LoadedScene old = cache.remove(currentId);
                 if (old != null) old.recycle();
             }
@@ -1179,7 +1179,7 @@ public final class Scenes {
             if (activeIds.size() > 1) return true;
             for (String id : activeIds) {
                 String b = baseSceneId(id);
-                if (FOLDER_SHUFFLE_ID.equals(b) || LOCK_FOLDER_SHUFFLE_ID.equals(b) || REDDIT_WALLPAPER_ID.equals(b)) {
+                if (FOLDER_SHUFFLE_ID.equals(b) || LOCK_FOLDER_SHUFFLE_ID.equals(b) || ONLINE_WALLPAPER_ID.equals(b)) {
                     return true;
                 }
             }
@@ -1190,8 +1190,8 @@ public final class Scenes {
             handler.removeCallbacks(rotateTick);
             if (canRotate()) {
                 long delayMs = getStaySeconds(getContext()) * 1000L;
-                if (REDDIT_WALLPAPER_ID.equals(baseSceneId(currentId))) {
-                    int mins = CustomMedia.getRedditIntervalMinutes(getContext(), CustomMedia.SCOPE_SCENE);
+                if (ONLINE_WALLPAPER_ID.equals(baseSceneId(currentId))) {
+                    int mins = CustomMedia.getOnlineIntervalMinutes(getContext(), CustomMedia.SCOPE_SCENE);
                     delayMs = Math.max(60_000L, mins * 60_000L);
                 }
                 handler.postDelayed(rotateTick, delayMs);
@@ -1203,10 +1203,10 @@ public final class Scenes {
             prevId = currentId;
             activeIdx = (activeIdx + 1) % activeIds.size();
             String nextBase = activeIds.get(activeIdx);
-            if (REDDIT_WALLPAPER_ID.equals(nextBase)) {
-                CustomMedia.fetchNextRedditWallpaperAsync(getContext(), CustomMedia.SCOPE_SCENE, () -> {
+            if (ONLINE_WALLPAPER_ID.equals(nextBase)) {
+                CustomMedia.fetchNextOnlineWallpaperAsync(getContext(), CustomMedia.SCOPE_SCENE, () -> {
                     folderFlipCounter = (folderFlipCounter + 1) % 2;
-                    currentId = REDDIT_WALLPAPER_ID + "#" + folderFlipCounter;
+                    currentId = ONLINE_WALLPAPER_ID + "#" + folderFlipCounter;
                     LoadedScene stale = cache.remove(currentId);
                     if (stale != null) stale.recycle();
                     ensureLoaded(currentId);
@@ -1282,16 +1282,16 @@ public final class Scenes {
                 cache.put(id, ls);
                 return ls;
             }
-            if (REDDIT_WALLPAPER_ID.equals(base)) {
-                Bitmap rBmp = CustomMedia.getRedditWallpaperBitmap(c, CustomMedia.SCOPE_SCENE, 1920, 1080);
-                long rTs = CustomMedia.getRedditWallpaperTimestamp(c, CustomMedia.SCOPE_SCENE);
+            if (ONLINE_WALLPAPER_ID.equals(base)) {
+                Bitmap rBmp = CustomMedia.getOnlineWallpaperBitmap(c, CustomMedia.SCOPE_SCENE, 1920, 1080);
+                long rTs = CustomMedia.getOnlineWallpaperTimestamp(c, CustomMedia.SCOPE_SCENE);
                 if (ls != null && ls.bg != null && !ls.bg.isRecycled()
                         && ((rBmp != null && ls.bg == rBmp && ls.customTs == rTs)
                         || (rBmp == null && ls.customTs == -1L))) {
                     return ls;
                 }
                 if (ls != null) ls.recycle();
-                ls = new LoadedScene(REDDIT_WALLPAPER_SPEC);
+                ls = new LoadedScene(ONLINE_WALLPAPER_SPEC);
                 if (rBmp != null && !rBmp.isRecycled()) {
                     ls.customTs = rTs;
                     ls.ownsBg = false;
@@ -1300,7 +1300,7 @@ public final class Scenes {
                     ls.customTs = -1L;
                     ls.ownsBg = true;
                     ls.bg = loadAssetBitmap(c, ALL[0].bgAsset, 1920, 1080);
-                    CustomMedia.fetchNextRedditWallpaperAsync(c, CustomMedia.SCOPE_SCENE, () -> {
+                    CustomMedia.fetchNextOnlineWallpaperAsync(c, CustomMedia.SCOPE_SCENE, () -> {
                         cache.remove(id);
                         cachedFrameKey = null;
                         notifySceneBackdrop();
@@ -1560,7 +1560,7 @@ public final class Scenes {
                             + getDefaultClockPos(ctx) + "|" + getCustomClockPos(ctx) + "|"
                             + getClassicClockPos(ctx) + "|" + getLockClockPos(ctx) + "|"
                             + CustomMedia.getCustomSceneTimestamp(ctx, cSlot) + "|"
-                            + CustomMedia.getRedditWallpaperTimestamp(ctx, CustomMedia.SCOPE_SCENE) + "|"
+                            + CustomMedia.getOnlineWallpaperTimestamp(ctx, CustomMedia.SCOPE_SCENE) + "|"
                             + (classicWallBmp != null && !classicWallBmp.isRecycled() ? classicWallBmp.getGenerationId() : 0) + "|"
                             + CustomMedia.getCustomLockTimestamp(ctx) + "|"
                             + buildGreeting(ctx) + "|" + w + "x" + h;
@@ -1860,13 +1860,13 @@ public final class Scenes {
             int hr = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
             String greet;
             if (hr >= 5 && hr < 12) {
-                greet = I18n.s(c, "Good morning", "Günaydın");
+                greet = I18n.t(c, "Good morning");
             } else if (hr >= 12 && hr < 18) {
-                greet = I18n.s(c, "Good afternoon", "İyi günler");
+                greet = I18n.t(c, "Good afternoon");
             } else if (hr >= 18 && hr < 22) {
-                greet = I18n.s(c, "Good evening", "İyi akşamlar");
+                greet = I18n.t(c, "Good evening");
             } else {
-                greet = I18n.s(c, "Good night", "İyi geceler");
+                greet = I18n.t(c, "Good night");
             }
             try {
                 Profiles.Profile cur = Profiles.current(c);

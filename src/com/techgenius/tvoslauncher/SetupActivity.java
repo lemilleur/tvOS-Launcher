@@ -74,7 +74,7 @@ public class SetupActivity extends Activity {
         // Top-right "Skip Setup" pill button on the first setup screen (language selection)
         skipBtn = new TextView(this);
         skipBtn.setId(View.generateViewId());
-        skipBtn.setText(tr("Skip Setup", "Kurulumu Atla") + "  \u203a");
+        skipBtn.setText(tr("Skip Setup") + "  \u203a");
         skipBtn.setTextColor(Color.WHITE);
         skipBtn.setTypeface(Ui.font(this, "medium"));
         Ui.textSize(skipBtn, 14);
@@ -94,7 +94,7 @@ public class SetupActivity extends Activity {
             v.animate().scaleX(has ? 1.06f : 1f).scaleY(has ? 1.06f : 1f).setDuration(180).start();
         });
         skipBtn.setOnClickListener(v -> {
-            Scenes.setClock24h(this, I18n.isDefault24hForLang(I18n.getLang(this)));
+            Scenes.setClock24h(this, true);
             getSharedPreferences("setup", MODE_PRIVATE).edit().putBoolean(K_DONE, true).putInt("cur_step", 0).apply();
             startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
             finish();
@@ -123,10 +123,6 @@ public class SetupActivity extends Activity {
             finish();
             return;
         }
-        String initLang = getIntent().getStringExtra("lang");
-        if (initLang != null && !initLang.isEmpty()) {
-            I18n.setLang(this, initLang);
-        }
         int savedStep = getSharedPreferences("setup", MODE_PRIVATE).getInt("cur_step", 0);
         show(getIntent().getIntExtra("step", savedStep), 0);  // adb: --ei step N opens a page directly
     }
@@ -135,13 +131,9 @@ public class SetupActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        String lang = intent.getStringExtra("lang");
-        if (lang != null && !lang.isEmpty()) {
-            I18n.setLang(this, lang);
-        }
         int savedStep = getSharedPreferences("setup", MODE_PRIVATE).getInt("cur_step", index);
         int target = intent.getIntExtra("step", savedStep);
-        if (target != index || (lang != null && !lang.isEmpty())) {
+        if (target != index) {
             show(target, 0);
         } else if (index == 5 || index == 6 || index == 7) {
             show(index, 0);
@@ -160,7 +152,7 @@ public class SetupActivity extends Activity {
         index = Math.max(0, Math.min(i, steps.size() - 1));
         getSharedPreferences("setup", MODE_PRIVATE).edit().putInt("cur_step", index).apply();
         if (skipBtn != null) {
-            skipBtn.setText(tr("Skip Setup", "Kurulumu Atla") + "  \u203a");
+            skipBtn.setText(tr("Skip Setup") + "  \u203a");
             skipBtn.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         }
         page.animate().cancel();
@@ -366,37 +358,27 @@ public class SetupActivity extends Activity {
     // ---------------------------------------------------------------- pages
 
     String tr(String en, String trStr) {
-        return I18n.s(this, en, trStr);
+        return I18n.t(this, en);
+    }
+
+    String tr(String key) {
+        return I18n.t(this, key);
     }
 
     /** Welcome, then Get Started. */
     void hello() {
         backdrop.animate().alpha(0f).setDuration(300).start();
-        TextView hi = title(tr("Welcome", "Ho\u015f Geldiniz"));
+        TextView hi = title(tr("Welcome"));
         Ui.textSize(hi, 52);
         hi.setAlpha(0f);
         hi.setTranslationY(u(12));
         hi.animate().alpha(1f).translationY(0).setDuration(700).start();
-        // "Welcome" in Turkish, English, Swedish, Indian and world languages, fading from one to the next.
-        String[] words = {"Welcome", "Ho\u015f Geldiniz", "V\u00e4lkommen", "\u0938\u094d\u0935\u093e\u0917\u0924 \u0939\u0948", "\u09b8\u09cd\u09ac\u09be\u0997\u09a4\u09ae", "\u0bb5\u0bb0\u0bb5\u0bc7\u0bb1\u0bcd\u0b95\u0bbf\u0bb1\u0bcb\u0bae\u0bcd", "\u0c38\u0c4d\u0c35\u0c3e\u0c17\u0c24\u0c02", "Bienvenue", "Bienvenido", "Willkommen", "\u3088\u3046\u3053\u305d", "Benvenuto", "Bem-vindo", "\u6b22\u8fce"};
-        int[] k = {I18n.isTr(this) ? 1 : 0};
-        Runnable[] cycle = new Runnable[1];
-        cycle[0] = () -> {
-            k[0] = (k[0] + 1) % words.length;
-            hi.animate().alpha(0f).setDuration(350).withEndAction(() -> {
-                hi.setText(words[k[0]]);
-                hi.animate().alpha(1f).setDuration(450).start();
-            }).start();
-            handler.postDelayed(cycle[0], 2200);
-        };
-        handler.postDelayed(cycle[0], 2400);
-        TextView s = subtitle(tr("Let\u2019s set up tvOS Launcher.", "tvOS Launcher\u2019\u0131 kural\u0131m."));
+        TextView s = subtitle(tr("Let\u2019s set up tvOS Launcher."));
         Ui.textSize(s, 16);
         ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
         LinearLayout l = scrollableList();
-        String curLang = I18n.getLang(this);
-        View startRow = option(l, tr("Get Started", "Ba\u015fla"), null, false, () -> {
-            Scenes.setClock24h(this, I18n.isDefault24hForLang(I18n.getLang(this)));
+        View startRow = option(l, tr("Get Started"), null, false, () -> {
+            Scenes.setClock24h(this, true);
             next();
         });
         if (skipBtn != null) {
@@ -406,22 +388,8 @@ public class SetupActivity extends Activity {
             skipBtn.setNextFocusDownId(startRow.getId());
             skipBtn.setNextFocusLeftId(startRow.getId());
         }
-        for (int i = 0; i < I18n.LANGUAGES.length; i++) {
-            final int rowIdx = i + 1;
-            final String code = I18n.LANGUAGES[i][0];
-            final String title = I18n.LANGUAGES[i][1];
-            final String sub = I18n.LANGUAGES[i][2];
-            View langRow = option(l, title, sub, code.equals(curLang), () -> {
-                I18n.setLang(this, code);
-                show(0, 0);
-                focusRow(rowIdx);
-            });
-            if (skipBtn != null) {
-                langRow.setNextFocusRightId(skipBtn.getId());
-            }
-        }
         TextView by = new TextView(this);
-        by.setText("by techgenius");
+        by.setText("Оригинал: techgenius · Русский форк: lemilleur");
         by.setTextColor(0x80FFFFFF);
         by.setTypeface(Ui.font(this, "regular"));
         Ui.textSize(by, 13);
@@ -432,13 +400,11 @@ public class SetupActivity extends Activity {
     }
 
     void profile() {
-        title(tr("Create Your Profile", "Profilinizi Olu\u015fturun"));
-        subtitle(tr(
-                "Your name and an avatar. Each profile keeps its own apps, background and Home Screen. Up to three people can have one.",
-                "Ad\u0131n\u0131z ve bir avatar. Her profil kendi uygulamalar\u0131n\u0131, arka plan\u0131n\u0131 ve Ana Ekran\u0131n\u0131 saklar. En fazla \u00fc\u00e7 ki\u015fi kullanabilir."));
+        title(tr("Create Your Profile"));
+        subtitle(tr("Your name and an avatar. Each profile keeps its own apps, background and Home Screen. Up to three people can have one."));
         Profiles.Profile p = Profiles.current(this);
         LinearLayout l = list();
-        View nameRow = option(l, tr("Name", "Ad"), I18n.profileName(this, p.name), false, () -> {
+        View nameRow = option(l, tr("Name"), I18n.profileName(this, p.name), false, () -> {
             EditText in = new EditText(this);
             in.setSingleLine(true);
             in.setText(p.name);
@@ -448,15 +414,15 @@ public class SetupActivity extends Activity {
             box.setPadding(pad, pad / 2, pad, 0);
             box.addView(in);
             android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(tr("Your name", "Ad\u0131n\u0131z")).setView(box)
-                    .setPositiveButton(tr("OK", "Tamam"), (d, w) -> {
+                    .setTitle(tr("Your name")).setView(box)
+                    .setPositiveButton(tr("OK"), (d, w) -> {
                         String n = in.getText().toString().trim();
                         if (!n.isEmpty()) {
                             p.name = n;
                             Profiles.update(this, p);
                         }
                         show(index, 0);
-                    }).setNegativeButton(tr("Cancel", "\u0130ptal"), null).show();
+                    }).setNegativeButton(tr("Cancel"), null).show();
             Ui.setupDialogEditText(in, dlg);
             in.requestFocus();
         });
@@ -516,7 +482,7 @@ public class SetupActivity extends Activity {
         rlp.bottomMargin = u(14);
         page.addView(row, rlp);
         LinearLayout l2 = list();
-        View contRow = option(l2, tr("Continue", "Devam Et"), null, false, this::next);
+        View contRow = option(l2, tr("Continue"), null, false, this::next);
         int contId = View.generateViewId();
         contRow.setId(contId);
 
@@ -539,14 +505,13 @@ public class SetupActivity extends Activity {
         boolean scenesMode = Scenes.isScenesLook(this);
         String curWall = Profiles.homePrefs(this).getString("wallpaper", "photo:tessellated-pavement.jpg");
         if (lookSubStep == 0) {
-            title(tr("Appearance", "G\u00f6r\u00fcn\u00fcm"));
-            TextView s = subtitle(tr("Choose how you want your Home Screen to look.",
-                    "Ana Ekran\u0131n\u0131z\u0131n nas\u0131l g\u00f6r\u00fcnmesini istedi\u011finizi se\u00e7in."));
+            title(tr("Appearance"));
+            TextView s = subtitle(tr("Choose how you want your Home Screen to look."));
             ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
             setBackdrop(scenesMode ? "scenes" : curWall);
             LinearLayout l = list();
-            View scenesRow = option(l, tr("Night scenes", "Gece sahneleri"),
-                    tr("Rotating nature scenes with a glass clock and bottom dock", "Cam saat ve alt dock ile d\u00f6n\u00fc\u015f\u00fcml\u00fc do\u011fa sahneleri"),
+            View scenesRow = option(l, tr("Night scenes"),
+                    tr("Rotating nature scenes with a glass clock and bottom dock"),
                     scenesMode, () -> {
                         Scenes.setLook(this, Scenes.LOOK_SCENES);
                         lookSubStep = 1;
@@ -558,8 +523,8 @@ public class SetupActivity extends Activity {
                 if (has) setBackdrop("scenes");
             });
 
-            View classicRow = option(l, tr("Classic", "Klasik"),
-                    tr("Top shelf, 6-column app grid and custom wallpapers", "\u00dcst raf, 6 s\u00fctunlu uygulama \u0131zgaras\u0131 ve \u00f6zel duvar ka\u011f\u0131tlar\u0131"),
+            View classicRow = option(l, tr("Classic"),
+                    tr("Top shelf, 6-column app grid and custom wallpapers"),
                     !scenesMode, () -> {
                         Scenes.setLook(this, Scenes.LOOK_CLASSIC);
                         lookSubStep = 2;
@@ -577,9 +542,8 @@ public class SetupActivity extends Activity {
         }
 
         if (lookSubStep == 1) {
-            title(tr("Choose Your Scenes", "Sahnelerinizi Se\u00e7in"));
-            TextView s = subtitle(tr("Choose which scenes take turns behind the glass clock.",
-                    "Cam saatin arkas\u0131nda hangi sahnelerin s\u0131rayla g\u00f6r\u00fcnece\u011fini se\u00e7in."));
+            title(tr("Choose Your Scenes"));
+            TextView s = subtitle(tr("Choose which scenes take turns behind the glass clock."));
             ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
             setBackdrop("scene_asset:" + Scenes.ALL[0].bgAsset);
             LinearLayout l = scrollableList();
@@ -588,7 +552,7 @@ public class SetupActivity extends Activity {
                 boolean on = Scenes.isSceneEnabled(this, spec.id);
                 final View[] rowRef = new View[1];
                 View r = option(l, spec.title(this),
-                        on ? tr("Included in rotation", "D\u00f6ng\u00fcye dahil") : tr("Off", "Kapal\u0131"),
+                        on ? tr("Included in rotation") : tr("Off"),
                         on, () -> {
                             if (Scenes.toggleScene(this, spec.id)) {
                                 boolean nowOn = Scenes.isSceneEnabled(this, spec.id);
@@ -598,7 +562,7 @@ public class SetupActivity extends Activity {
                                         View texts = vg.getChildAt(0);
                                         if (texts instanceof ViewGroup && ((ViewGroup) texts).getChildCount() >= 2) {
                                             TextView d = (TextView) ((ViewGroup) texts).getChildAt(1);
-                                            d.setText(nowOn ? tr("Included in rotation", "D\u00f6ng\u00fcye dahil") : tr("Off", "Kapal\u0131"));
+                                            d.setText(nowOn ? tr("Included in rotation") : tr("Off"));
                                         }
                                         View tick = vg.getChildAt(1);
                                         if (tick instanceof TextView) {
@@ -616,7 +580,7 @@ public class SetupActivity extends Activity {
                 });
                 if (i == 0) r.requestFocus();
             }
-            option(l, tr("Continue", "Devam Et"), null, false, () -> {
+            option(l, tr("Continue"), null, false, () -> {
                 lookSubStep = 0;
                 next();
             });
@@ -625,9 +589,8 @@ public class SetupActivity extends Activity {
         }
 
         // lookSubStep == 2: Classic Backgrounds
-        title(tr("Choose a Background", "Bir Arka Plan Se\u00e7in"));
-        TextView s = subtitle(tr("Choose a photo or ambient colour theme behind your apps.",
-                "Uygulamalar\u0131n\u0131z\u0131n arkas\u0131nda bir foto\u011fraf veya ortam renk temas\u0131 se\u00e7in."));
+        title(tr("Choose a Background"));
+        TextView s = subtitle(tr("Choose a photo or ambient colour theme behind your apps."));
         ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
         setBackdrop(curWall);
         LinearLayout l = scrollableList();
@@ -636,7 +599,7 @@ public class SetupActivity extends Activity {
             String name = MainActivity.wallName(this, i);
             boolean checked = key.equals(curWall);
             View r = option(l, name,
-                    key.startsWith("photo:") ? tr("Classic photo", "Klasik foto\u011fraf") : tr("Classic look", "Klasik g\u00f6r\u00fcn\u00fcm"),
+                    key.startsWith("photo:") ? tr("Classic photo") : tr("Classic look"),
                     checked, () -> {
                         Scenes.setLook(this, Scenes.LOOK_CLASSIC);
                         Profiles.homePrefs(this).edit().putString("wallpaper", key).apply();
@@ -656,31 +619,24 @@ public class SetupActivity extends Activity {
     /** This profile's Home Screen: recommendations and/or news on the top shelf, as two switches. */
     void homeContent() {
         backdrop.animate().alpha(0.5f).setDuration(300).start();
-        title(tr("Your Home Screen", "Ana Ekran\u0131n\u0131z"));
-        subtitle(tr("What appears at the top of Home, behind your apps. Choose any, all or none.",
-                "Uygulamalar\u0131n\u0131z\u0131n arkas\u0131nda, Ana Ekran\u0131n \u00fcst k\u0131sm\u0131nda ne g\u00f6r\u00fcnece\u011fini se\u00e7in."));
-        boolean recs = Suggestions.showRecs(this), news = Suggestions.showNews(this);
+        title(tr("Your Home Screen"));
+        subtitle(tr("What appears at the top of Home, behind your apps. Choose any, all or none."));
+        boolean recs = Suggestions.showRecs(this);
         LinearLayout l = list();
-        option(l, tr("Recommendations", "\u00d6neriler"),
-                tr("Popular movies and series on your streaming services", "Yay\u0131n servislerinizdeki pop\u00fcler filmler ve diziler"), recs, () -> {
-            Suggestions.setShelf(this, !recs, news);
+        option(l, tr("Recommendations"),
+                tr("Popular movies and series on your streaming services"), recs, () -> {
+            Suggestions.setShelf(this, recs ? Suggestions.SHELF_NONE : Suggestions.SHELF_RECS);
             show(index, 0);
             focusRow(0);
         });
-        option(l, tr("News", "Haberler"),
-                tr("Headlines from your city and the world", "\u015eehrinizden ve d\u00fcnyadan man\u015fetler"), news, () -> {
-            Suggestions.setShelf(this, recs, !news);
+        boolean cw = Profiles.homePrefs(this).getBoolean("cw_enabled", true);
+        option(l, tr("Continue Watching"),
+                tr("What you were watching, mixed into the carousel"), cw, () -> {
+            Profiles.homePrefs(this).edit().putBoolean("cw_enabled", !cw).apply();
             show(index, 0);
             focusRow(1);
         });
-        boolean cw = Profiles.homePrefs(this).getBoolean("cw_enabled", true);
-        option(l, tr("Continue Watching", "\u0130zlemeye Devam Et"),
-                tr("What you were watching, mixed into the carousel", "\u0130zledi\u011finiz i\u00e7erikler ana ekranda g\u00f6sterilir"), cw, () -> {
-            Profiles.homePrefs(this).edit().putBoolean("cw_enabled", !cw).apply();
-            show(index, 0);
-            focusRow(2);
-        });
-        option(l, tr("Continue", "Devam Et"), recs || news || cw ? null : tr("Just your background for now", "\u015eimdilik yaln\u0131zca arka plan\u0131n\u0131z"), false, this::next);
+        option(l, tr("Continue"), recs || cw ? null : tr("Just your background for now"), false, this::next);
         dots();
     }
 
@@ -691,22 +647,21 @@ public class SetupActivity extends Activity {
     }
 
     void weather() {
-        title(tr("Weather", "Hava Durumu"));
-        subtitle(tr("A small weather display on Home, with a 5-day forecast.",
-                "Ana Ekranda 5 g\u00fcnl\u00fck tahminle birlikte hava durumu g\u00f6r\u00fcn\u00fcm\u00fc."));
+        title(tr("Weather"));
+        subtitle(tr("A small weather display on Home, with a 5-day forecast."));
         LinearLayout l = list();
         String city = Weather.place(this);
-        option(l, tr("Use My Location", "Konumumu Kullan"),
-                city.isEmpty() ? tr("Found from your internet connection", "\u0130nternet ba\u011flant\u0131n\u0131zdan bulunur") : tr("Looks like ", "Tahmini konum: ") + city,
+        option(l, tr("Use My Location"),
+                city.isEmpty() ? tr("Found from your internet connection") : tr("Looks like ") + city,
                 Weather.enabled(this) && !Weather.manual(this), () -> {
                     Weather.prefs(this).edit().putBoolean(Weather.K_ENABLED, true).apply();
                     Weather.setPlace(this, null);
                     next();
                 });
-        option(l, tr("Choose a City\u2026", "\u015eehir Se\u00e7in\u2026"),
-                Weather.manual(this) ? Weather.place(this) : tr("Search by name", "\u0130sme g\u00f6re ara"), Weather.manual(this), this::searchCityDialog);
-        option(l, tr("Next", "\u0130leri"), null, false, this::next);
-        option(l, tr("Don't Show Weather", "Hava Durumunu G\u00f6sterme"), null, !Weather.enabled(this), () -> {
+        option(l, tr("Choose a City\u2026"),
+                Weather.manual(this) ? Weather.place(this) : tr("Search by name"), Weather.manual(this), this::searchCityDialog);
+        option(l, tr("Next"), null, false, this::next);
+        option(l, tr("Don't Show Weather"), null, !Weather.enabled(this), () -> {
             Weather.prefs(this).edit().putBoolean(Weather.K_ENABLED, false).apply();
             Weather.changed(this);
             next();
@@ -720,22 +675,22 @@ public class SetupActivity extends Activity {
     private void searchCityDialog() {
         EditText in = new EditText(this);
         in.setSingleLine(true);
-        in.setHint(tr("City name, e.g. Istanbul", "\u015eehir ad\u0131, \u00f6rn. \u0130stanbul"));
+        in.setHint("Название города, например Москва");
         in.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         int pad = u(14);
         FrameLayout box = new FrameLayout(this);
         box.setPadding(pad, pad / 2, pad, 0);
         box.addView(in);
         android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(tr("Choose City", "\u015eehir Se\u00e7in"))
+                .setTitle(tr("Choose City"))
                 .setView(box)
-                .setPositiveButton(tr("Search", "Ara"), (d, w) -> {
+                .setPositiveButton(tr("Search"), (d, w) -> {
                     String q = in.getText().toString().trim();
                     if (q.isEmpty()) return;
                     new Thread(() -> {
                         List<Weather.Place> found;
                         try {
-                            found = Weather.search(q);
+                            found = Weather.search(this, q);
                         } catch (Exception e) {
                             found = null;
                         }
@@ -743,7 +698,7 @@ public class SetupActivity extends Activity {
                         runOnUiThread(() -> showCityMatches(q, res));
                     }).start();
                 })
-                .setNegativeButton(tr("Cancel", "\u0130ptal"), null)
+                .setNegativeButton(tr("Cancel"), null)
                 .show();
         Ui.setupDialogEditText(in, dlg);
         in.requestFocus();
@@ -754,8 +709,8 @@ public class SetupActivity extends Activity {
         if (res == null || res.isEmpty()) {
             android.widget.Toast.makeText(this,
                     res == null
-                            ? tr("Couldn't search. Check the internet connection.", "Arama yap\u0131lamad\u0131. \u0130nternet ba\u011flant\u0131s\u0131n\u0131 kontrol edin.")
-                            : tr("No place found for \u201c" + q + "\u201d.", "\u201c" + q + "\u201d i\u00e7in konum bulunamad\u0131."),
+                            ? tr("Couldn't search. Check the internet connection.")
+                            : (tr("No place found for \u201c") + q + "\u201d."),
                     android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
@@ -765,7 +720,7 @@ public class SetupActivity extends Activity {
             names[i] = pl.detail.isEmpty() ? pl.name : pl.name + "  \u00b7  " + pl.detail;
         }
         new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(tr("Matching places", "E\u015fle\u015fen konumlar"))
+                .setTitle(tr("Matching places"))
                 .setItems(names, (d, w) -> {
                     Weather.Place picked = res.get(w);
                     Weather.prefs(this).edit().putBoolean(Weather.K_ENABLED, true).apply();
@@ -774,7 +729,7 @@ public class SetupActivity extends Activity {
                     show(index, 0);
                     focusRow(2);
                 })
-                .setNegativeButton(tr("Cancel", "\u0130ptal"), null)
+                .setNegativeButton(tr("Cancel"), null)
                 .show();
     }
 
@@ -789,13 +744,12 @@ public class SetupActivity extends Activity {
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(u(90), u(54));
         ilp.bottomMargin = u(10);
         page.addView(icon, ilp);
-        title(tr("Presentation", "Sunum"));
-        subtitle(tr("Images, videos and webpages sent from any phone or computer on the same Wi-Fi. For everyone on this TV.",
-                "Ayn\u0131 Wi-Fi a\u011f\u0131ndaki herhangi bir telefon veya bilgisayardan g\u00f6nderilen g\u00f6rseller, videolar ve web sayfalar\u0131."));
+        title(tr("Presentation"));
+        subtitle(tr("Images, videos and webpages sent from any phone or computer on the same Wi-Fi. For everyone on this TV."));
         boolean on = com.techgenius.tvoslauncher.present.Presenter.enabled(this);
         LinearLayout l = list();
-        option(l, tr("Use Presentation", "Sunumu Kullan"),
-                on ? tr("Adds a Presentation card to Home", "Ana Ekrana bir Sunum kart\u0131 ekler") : tr("Off", "Kapal\u0131"), on, () -> {
+        option(l, tr("Use Presentation"),
+                on ? tr("Adds a Presentation card to Home") : tr("Off"), on, () -> {
             com.techgenius.tvoslauncher.present.Presenter.set(this, com.techgenius.tvoslauncher.present.Presenter.KEY_ENABLED, !on);
             show(index, 0);
             focusRow(0);
@@ -803,20 +757,20 @@ public class SetupActivity extends Activity {
         if (on) {
             boolean boot = com.techgenius.tvoslauncher.present.Presenter.startOnBoot(this),
                     awake = com.techgenius.tvoslauncher.present.Presenter.keepAwake(this);
-            option(l, tr("Start with the TV", "TV ile Ba\u015flat"),
-                    tr("Play as soon as the TV turns on (signage)", "TV a\u00e7\u0131l\u0131r a\u00e7\u0131lmaz oynatmaya ba\u015fla (tabela modu)"), boot, () -> {
+            option(l, tr("Start with the TV"),
+                    tr("Play as soon as the TV turns on (signage)"), boot, () -> {
                 com.techgenius.tvoslauncher.present.Presenter.set(this, com.techgenius.tvoslauncher.present.Presenter.KEY_BOOT, !boot);
                 show(index, 0);
                 focusRow(1);
             });
-            option(l, tr("Keep Screen Awake", "Ekran\u0131 A\u00e7\u0131k Tut"),
-                    tr("No screensaver or sleep while presenting", "Sunum s\u0131ras\u0131nda ekran koruyucu veya uyku yok"), awake, () -> {
+            option(l, tr("Keep Screen Awake"),
+                    tr("No screensaver or sleep while presenting"), awake, () -> {
                 com.techgenius.tvoslauncher.present.Presenter.set(this, com.techgenius.tvoslauncher.present.Presenter.KEY_AWAKE, !awake);
                 show(index, 0);
                 focusRow(2);
             });
         }
-        option(l, tr("Continue", "Devam Et"), null, false, this::next);
+        option(l, tr("Continue"), null, false, this::next);
         dots();
     }
 
@@ -829,55 +783,48 @@ public class SetupActivity extends Activity {
 
     void homeAndPermissions() {
         if (permMode == 0) {
-            title(tr("Finish Setting Up", "Kurulumu Tamamla"));
-            TextView s = subtitle(tr(
-                    "Select a usage mode for permissions (Button Mapper Accessibility, Continue Watching, and Wi-Fi). Pick ONE usage mode below:",
-                    "İzinler için bir kullanım modu seçin (Düğme Eşleyici Erişilebilirliği, İzlemeye Devam Et ve Wi-Fi). Aşağıdan BİR kullanım modu seçin:"));
+            title(tr("Finish Setting Up"));
+            TextView s = subtitle(tr("Select a usage mode for permissions (Button Mapper Accessibility, Continue Watching, and Wi-Fi). Pick ONE usage mode below:"));
             ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(14);
             LinearLayout l = scrollableList();
-            option(l, tr("Mode: Secure Auto Setup & Close ADB (Recommended)", "Mod: Güvenli Otomatik Kurulum ve ADB'yi Kapat (Önerilen)"),
-                    tr("Grants WRITE_SECURE_SETTINGS once to self-repair Accessibility, then closes port 5555", "Erişilebilirliği korumak için bir kez WRITE_SECURE_SETTINGS verir, ardından port 5555'i kapatır"),
+            option(l, tr("Mode: Secure Auto Setup & Close ADB (Recommended)"),
+                    tr("Grants WRITE_SECURE_SETTINGS once to self-repair Accessibility, then closes port 5555"),
                     false,
                     () -> {
                         LocalAdb.setAdbMode(this, LocalAdb.ADB_MODE_SECURE_CLOSE);
                         proceedToEasyAdbOrDirections();
                     });
-            option(l, tr("Mode: Persistent ADB Setup (Keep ADB Open)", "Mod: Kalıcı ADB Kurulumu (ADB'yi Açık Tut)"),
-                    tr("Keeps network ADB enabled for CleanYourTV debloating (Note: leaves port 5555 open on LAN)", "CleanYourTV debloat özellikleri için ağ ADB'sini açık tutar (Not: yerel ağda port 5555 açık kalır)"),
+            option(l, tr("Mode: Persistent ADB Setup (Keep ADB Open)"),
+                    tr("Keeps network ADB enabled for CleanYourTV debloating (Note: leaves port 5555 open on LAN)"),
                     false,
                     () -> {
                         LocalAdb.setAdbMode(this, LocalAdb.ADB_MODE_PERSISTENT);
                         proceedToEasyAdbOrDirections();
                     });
-            option(l, tr("Mode: Manual Setup (Without ADB)", "Mod: Manuel Kurulum (ADB Olmadan)"),
-                    tr("Grant permissions one by one manually through Android TV Settings", "İzinleri Android TV Ayarları üzerinden tek tek elle verin"),
+            option(l, tr("Mode: Manual Setup (Without ADB)"),
+                    tr("Grant permissions one by one manually through Android TV Settings"),
                     false,
                     () -> {
                         permMode = 2;
                         show(5, 1);
                     });
-            option(l, tr("Continue", "Devam Et"), null, false, this::next);
+            option(l, tr("Continue"), null, false, this::next);
             dots();
             return;
         }
 
         if (permMode == 1) {
             boolean secureClose = LocalAdb.getAdbMode(this) == LocalAdb.ADB_MODE_SECURE_CLOSE;
-            title(tr("Enable ADB Debugging", "ADB Hata Ayıklamayı Etkinleştirin"));
-            TextView s = subtitle(tr(
-                    "1. Open TV Settings \u2192 System \u2192 About and click Build 7 times to unlock Developer Options.\n"
-                    + "2. Open Settings \u2192 System \u2192 Developer Options and enable USB Debugging / Network Debugging.\n"
-                    + "3. Return here and select Grant Permissions Now"
-                    + (secureClose ? " (ADB port 5555 will be closed automatically right after setup)." : " (ADB will remain enabled for CleanYourTV)."),
-                    "1. TV Ayarları \u2192 Sistem \u2192 Hakkında menüsüne gidin ve Geliştirici Seçeneklerini açmak için Yapı Numarası'na 7 kez basın.\n"
-                    + "2. Ayarlar \u2192 Sistem \u2192 Geliştirici Seçenekleri'nden USB / Ağ Hata Ayıklamayı açın.\n"
-                    + "3. Buraya dönüp İzinleri Şimdi Ver'i seçin"
-                    + (secureClose ? " (Kurulumdan hemen sonra ADB port 5555 otomatik olarak kapatılacaktır)." : " (CleanYourTV için ADB açık kalacaktır).")));
+            title(tr("Enable ADB Debugging"));
+            TextView s = subtitle((tr("1. Open TV Settings \u2192 System \u2192 About and click Build 7 times to unlock Developer Options.\n")
+                    + tr("2. Open Settings \u2192 System \u2192 Developer Options and enable USB Debugging / Network Debugging.\n")
+                    + tr("3. Return here and select Grant Permissions Now")
+                    + (secureClose ? tr(" (ADB port 5555 will be closed automatically right after setup).") : tr(" (ADB will remain enabled for CleanYourTV)."))));
             ((LinearLayout.LayoutParams) s.getLayoutParams()).width = u(620);
             ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(14);
             LinearLayout l = scrollableList();
-            option(l, tr("Open Developer Options / TV Settings\u2026", "Geliştirici Seçeneklerini / TV Ayarlarını Aç\u2026"),
-                    tr("Enable USB / Network Debugging in Developer Options", "Geliştirici Seçeneklerinde USB / Ağ Hata Ayıklamayı açın"),
+            option(l, tr("Open Developer Options / TV Settings\u2026"),
+                    tr("Enable USB / Network Debugging in Developer Options"),
                     LocalAdb.isAdbSettingEnabled(this),
                     () -> {
                         Intent dev = new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
@@ -889,15 +836,15 @@ public class SetupActivity extends Activity {
                         }
                     });
             option(l, secureClose
-                            ? tr("Grant Permissions & Close ADB Now", "İzinleri Ver ve ADB'yi Şimdi Kapat")
-                            : tr("Grant Permissions Now (Keep ADB Open)", "İzinleri Şimdi Ver (ADB'yi Açık Tut)"),
+                            ? tr("Grant Permissions & Close ADB Now")
+                            : tr("Grant Permissions Now (Keep ADB Open)"),
                     secureClose
-                            ? tr("Grants WRITE_SECURE_SETTINGS & closes port 5555 when done", "WRITE_SECURE_SETTINGS verir ve bittiğinde port 5555'i kapatır")
-                            : tr("Uses local ADB to grant permissions and keeps ADB open", "İzinleri vermek için yerel ADB'yi kullanır ve ADB'yi açık tutar"),
+                            ? tr("Grants WRITE_SECURE_SETTINGS & closes port 5555 when done")
+                            : tr("Uses local ADB to grant permissions and keeps ADB open"),
                     false,
                     this::runEasyAdbGrant);
-            option(l, tr("Back to Usage Mode Selection", "Kullanım Modu Seçimine Dön"),
-                    tr("Switch between Secure Auto Setup, Persistent ADB, or Manual Setup", "Güvenli Otomatik, Kalıcı ADB veya Manuel Kurulum arasında geçiş yapın"),
+            option(l, tr("Back to Usage Mode Selection"),
+                    tr("Switch between Secure Auto Setup, Persistent ADB, or Manual Setup"),
                     false,
                     () -> {
                         permMode = 0;
@@ -912,29 +859,28 @@ public class SetupActivity extends Activity {
             askedLocation = true;
             handler.postDelayed(() -> Perms.requestLocation(this), 600);
         }
-        title(tr("Finish Setting Up", "Kurulumu Tamamla"));
-        TextView s = subtitle(tr("tvOS Launcher works best as the home screen. Allow these once; anything this TV doesn't support is skipped.",
-                "tvOS Launcher en iyi ana ekran olarak \u00e7al\u0131\u015f\u0131r. Bunlara bir kez izin verin; bu TV'nin desteklemedi\u011fi \u00f6zellikler atlan\u0131r."));
+        title(tr("Finish Setting Up"));
+        TextView s = subtitle(tr("tvOS Launcher works best as the home screen. Allow these once; anything this TV doesn't support is skipped."));
         ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
         LinearLayout l = scrollableList();
         boolean home = Perms.isDefaultHome(this);
-        option(l, tr("Make tvOS Launcher the Home Screen", "tvOS Launcher'\u0131 Ana Ekran Yap"),
-                home ? tr("The Home button opens tvOS Launcher", "Ana Ekran d\u00fc\u011fmesi tvOS Launcher'\u0131 a\u00e7ar") : tr("Choose tvOS Launcher when asked", "Soruldu\u011funda tvOS Launcher'\u0131 se\u00e7in"), home,
+        option(l, tr("Make tvOS Launcher the Home Screen"),
+                home ? tr("The Home button opens tvOS Launcher") : tr("Choose tvOS Launcher when asked"), home,
                 () -> Perms.requestDefaultHome(this));
         if (!Perms.hasLocation(this)) {
-            option(l, tr("Show the Wi-Fi Name", "Wi-Fi Ad\u0131n\u0131 G\u00f6ster"),
-                    tr("In Control Center (needs location access)", "Denetim Merkezi'nde (konum izni gerekir)"), false,
+            option(l, tr("Show the Wi-Fi Name"),
+                    tr("In Control Center (needs location access)"), false,
                     () -> Perms.requestLocation(this));
         }
         if (Perms.listenerSupported(this) && !Perms.hasListener(this)) {
-            option(l, tr("Continue Watching", "\u0130zlemeye Devam Et"),
-                    tr("Remember what you play in each app", "Her uygulamada ne oynatt\u0131\u011f\u0131n\u0131z\u0131 hat\u0131rla"), false, () -> Perms.requestListener(this));
+            option(l, tr("Continue Watching"),
+                    tr("Remember what you play in each app"), false, () -> Perms.requestListener(this));
         }
         boolean accOn = ButtonMapper.isServiceEnabled(this);
-        option(l, tr("Button Mapper & Control Panel", "D\u00fc\u011fme E\u015fleyici ve Denetim Paneli"),
+        option(l, tr("Button Mapper & Control Panel"),
                 accOn
-                        ? tr("Active in Accessibility", "Eri\u015filebilirlik'te etkin")
-                        : tr("Enable in Accessibility so remapped buttons work in all apps", "E\u015flenen d\u00fc\u011fmelerin t\u00fcm uygulamalarda \u00e7al\u0131\u015fmas\u0131 i\u00e7in Eri\u015filebilirlik'te etkinle\u015ftirin"),
+                        ? tr("Active in Accessibility")
+                        : tr("Enable in Accessibility so remapped buttons work in all apps"),
                 accOn,
                 () -> {
                     Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
@@ -942,41 +888,39 @@ public class SetupActivity extends Activity {
                         Suggestions.start(this, new Intent(android.provider.Settings.ACTION_SETTINGS));
                     }
                 });
-        option(l, tr("Back to Usage Mode Selection", "Kullanım Modu Seçimine Dön"), null, false, () -> {
+        option(l, tr("Back to Usage Mode Selection"), null, false, () -> {
             permMode = 0;
             show(5, -1);
         });
-        option(l, tr("Continue", "Devam Et"), null, false, this::next);
+        option(l, tr("Continue"), null, false, this::next);
         dots();
     }
 
     /** Dedicated page right after permissions: Make tvOS Launcher Default Home (with sequential troubleshooting steps). */
     void defaultHomeSetup() {
-        title(tr("Make tvOS Launcher Default Home", "tvOS Launcher'ı Varsayılan Ana Ekran Yap"));
-        TextView s = subtitle(tr(
-                "On TCL, Philips, and Google TVs, OEM firmware often forces the stock launcher when pressing Home. Follow the steps below so pressing Home always opens tvOS Launcher, then click Continue.",
-                "TCL, Philips ve Google TV'lerde üretici yazılımı genellikle Home tuşuna basıldığında stok başlatıcıyı zorlar. Home tuşunun her zaman tvOS Launcher'ı açması için aşağıdaki adımları uygulayın ve ardından Devam Et'e basın."));
+        title(tr("Make tvOS Launcher Default Home"));
+        TextView s = subtitle(tr("On TCL, Philips, and Google TVs, OEM firmware often forces the stock launcher when pressing Home. Follow the steps below so pressing Home always opens tvOS Launcher, then click Continue."));
         ((LinearLayout.LayoutParams) s.getLayoutParams()).width = u(620);
         ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(14);
         LinearLayout l = scrollableList();
 
         boolean isDef = Perms.isDefaultHome(this);
-        option(l, tr("Step 1: Set tvOS Launcher as Default via Local ADB", "1. Adım: Yerel ADB ile tvOS Launcher'ı Varsayılan Yap"),
-                isDef ? tr("Active — Set as default home launcher", "Etkin — Varsayılan ana ekran olarak ayarlandı")
-                      : tr("Run ROLE_HOME & set-home-activity over Local ADB ›", "Yerel ADB üzerinden ROLE_HOME ve set-home-activity çalıştır ›"),
+        option(l, tr("Step 1: Set tvOS Launcher as Default via Local ADB"),
+                isDef ? tr("Active — Set as default home launcher")
+                      : tr("Run ROLE_HOME & set-home-activity over Local ADB ›"),
                 isDef,
                 () -> runAdbTroubleshootStep(this::executeStep1SetDefaultLauncherViaAdb));
 
-        option(l, tr("Step 2: Disable System Launchers (Google TV / Android TV / OEM)", "2. Adım: Sistem Başlatıcılarını Devre Dışı Bırak (Google TV / Android TV / OEM)"),
+        option(l, tr("Step 2: Disable System Launchers (Google TV / Android TV / OEM)"),
                 CleanYourTv.getSystemLaunchersSummary(this),
                 !Perms.hasEnabledStockLauncher(this),
                 () -> runAdbTroubleshootStep(() -> CleanYourTv.showDisableSystemLaunchersDialog(this, () -> show(index, 0))));
 
         boolean homeFixOn = ButtonMapper.isHomeFixEnabled(this);
-        option(l, tr("Step 3: Fix Home Button via Accessibility (Button Mapper)", "3. Adım: Erişilebilirlik ile Ana Ekran Tuşu Düzeltmesi"),
+        option(l, tr("Step 3: Fix Home Button via Accessibility (Button Mapper)"),
                 homeFixOn
-                        ? tr("On — Pressing Home launches tvOS Launcher", "Açık — Ana Ekran tuşu tvOS Launcher'ı açar")
-                        : tr("Off — Tap to enable Home button remap", "Kapalı — Ana Ekran tuşu yönlendirmesini açmak için dokunun"),
+                        ? tr("On — Pressing Home launches tvOS Launcher")
+                        : tr("Off — Tap to enable Home button remap"),
                 homeFixOn,
                 () -> {
                     boolean next = !ButtonMapper.isHomeFixEnabled(this);
@@ -992,13 +936,13 @@ public class SetupActivity extends Activity {
                     show(index, 0);
                 });
 
-        option(l, tr("Step 4: Open Android System Home Settings", "4. Adım: Android Sistem Ana Ekran Ayarlarını Aç"),
-                tr("Open system selector (if supported by TV) ›", "Sistem seçicisini aç (TV destekliyorsa) ›"),
+        option(l, tr("Step 4: Open Android System Home Settings"),
+                tr("Open system selector (if supported by TV) ›"),
                 false,
                 () -> Perms.openSystemHomeSettingsUi(this));
 
-        option(l, tr("Continue", "Devam Et"),
-                tr("Proceed to the next setup step when you are done here", "Buradaki adımlarla işiniz bittiğinde sonraki kurulum adımına geçin"),
+        option(l, tr("Continue"),
+                tr("Proceed to the next setup step when you are done here"),
                 false,
                 this::next);
         dots();
@@ -1006,9 +950,8 @@ public class SetupActivity extends Activity {
 
     private void executeStep1SetDefaultLauncherViaAdb() {
         android.app.AlertDialog progress = new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(tr("Setting Default Launcher…", "Varsayılan Başlatıcı Ayarlanıyor…"))
-                .setMessage(tr("Setting ROLE_HOME and default home activity over Local ADB…",
-                        "Yerel ADB üzerinden ROLE_HOME ve varsayılan ana ekran etkinliği ayarlanıyor…"))
+                .setTitle(tr("Setting Default Launcher…"))
+                .setMessage(tr("Setting ROLE_HOME and default home activity over Local ADB…"))
                 .setCancelable(false)
                 .create();
         progress.show();
@@ -1022,8 +965,8 @@ public class SetupActivity extends Activity {
             show(index, 0);
             android.widget.Toast.makeText(this,
                     success
-                            ? tr("Step 1 complete: Default home launcher set via ADB!", "1. Adım tamamlandı: Varsayılan ana ekran ADB ile ayarlandı!")
-                            : tr("Could not connect to ADB — enable USB/Network Debugging or use Step 3 / Step 4.", "ADB'ye bağlanılamadı — USB/Ağ Hata Ayıklamayı açın veya 3. / 4. Adımı kullanın."),
+                            ? tr("Step 1 complete: Default home launcher set via ADB!")
+                            : tr("Could not connect to ADB — enable USB/Network Debugging or use Step 3 / Step 4."),
                     android.widget.Toast.LENGTH_LONG).show();
         }));
     }
@@ -1038,16 +981,13 @@ public class SetupActivity extends Activity {
         boolean adbOff = !LocalAdb.isAdbSettingEnabled(this) && !LocalAdb.portReachable;
         if (secureModeSelected || adbOff) {
             new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(tr("ADB Mode Required", "ADB Modu Gerekli"))
-                    .setMessage(tr(
-                            "You need the ADB mode enabled for this troubleshooting step. You can always change the ADB mode from Settings later.\n\nWould you like to enable ADB now or skip this step?",
-                            "Bu sorun giderme adımı için ADB moduna ihtiyacınız vardır. ADB modunu daha sonra istediğiniz zaman Ayarlar'dan değiştirebilirsiniz.\n\nADB'yi şimdi etkinleştirmek mi yoksa bu adımı atlamak mı istersiniz?"))
-                    .setPositiveButton(tr("Enable ADB Now", "ADB'yi Şimdi Etkinleştir"), (d, w) -> {
+                    .setTitle(tr("ADB Mode Required"))
+                    .setMessage(tr("You need the ADB mode enabled for this troubleshooting step. You can always change the ADB mode from Settings later.\n\nWould you like to enable ADB now or skip this step?"))
+                    .setPositiveButton(tr("Enable ADB Now"), (d, w) -> {
                         LocalAdb.setAdbMode(this, LocalAdb.ADB_MODE_PERSISTENT);
                         android.app.AlertDialog progress = new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                                .setTitle(tr("Enabling ADB…", "ADB Etkinleştiriliyor…"))
-                                .setMessage(tr("Turning on ADB debugging for this troubleshooting step…",
-                                        "Bu sorun giderme adımı için ADB hata ayıklama açılıyor…"))
+                                .setTitle(tr("Enabling ADB…"))
+                                .setMessage(tr("Turning on ADB debugging for this troubleshooting step…"))
                                 .setCancelable(false)
                                 .create();
                         progress.show();
@@ -1062,11 +1002,9 @@ public class SetupActivity extends Activity {
                                 stepAction.run();
                             } else {
                                 new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                                        .setTitle(tr("Turn On ADB Debugging", "ADB Hata Ayıklamayı Açın"))
-                                        .setMessage(tr(
-                                                "Please enable USB Debugging / Network Debugging in Developer Options, then return here to run this step.",
-                                                "Lütfen Geliştirici Seçenekleri'nde USB / Ağ Hata Ayıklamayı açın ve ardından bu adımı çalıştırmak için buraya dönün."))
-                                        .setPositiveButton(tr("Open Developer Options…", "Geliştirici Seçeneklerini Aç…"), (d2, w2) -> {
+                                        .setTitle(tr("Turn On ADB Debugging"))
+                                        .setMessage(tr("Please enable USB Debugging / Network Debugging in Developer Options, then return here to run this step."))
+                                        .setPositiveButton(tr("Open Developer Options…"), (d2, w2) -> {
                                             Intent dev = new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
                                             if (!Suggestions.start(this, dev)) {
                                                 Intent about = new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS);
@@ -1075,12 +1013,12 @@ public class SetupActivity extends Activity {
                                                 }
                                             }
                                         })
-                                        .setNegativeButton(tr("Skip This Step", "Bu Adımı Atla"), null)
+                                        .setNegativeButton(tr("Skip This Step"), null)
                                         .show();
                             }
                         }));
                     })
-                    .setNegativeButton(tr("Skip This Step", "Bu Adımı Atla"), null)
+                    .setNegativeButton(tr("Skip This Step"), null)
                     .show();
             return;
         }
@@ -1100,11 +1038,9 @@ public class SetupActivity extends Activity {
         final boolean closeAfter = LocalAdb.getAdbMode(this) == LocalAdb.ADB_MODE_SECURE_CLOSE;
         android.app.AlertDialog progress = new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(closeAfter
-                        ? tr("Secure Setup (ADB)", "Güvenli Kurulum (ADB)")
-                        : tr("Persistent ADB Setup", "Kalıcı ADB Kurulumu"))
-                .setMessage(tr(
-                        "Granting permissions via local ADB\u2026\n\nIf an \u201cAllow USB debugging?\u201d prompt appears on screen, check \u201cAlways allow\u201d and press Allow.",
-                        "Yerel ADB ile izinler veriliyor\u2026\n\nEkranda \u201cUSB hata ayıklamaya izin verilsin mi?\u201d penceresi çıkarsa \u201cHer zaman izin ver\u201di işaretleyip İzin Ver'e basın."))
+                        ? tr("Secure Setup (ADB)")
+                        : tr("Persistent ADB Setup"))
+                .setMessage(tr("Granting permissions via local ADB\u2026\n\nIf an \u201cAllow USB debugging?\u201d prompt appears on screen, check \u201cAlways allow\u201d and press Allow."))
                 .setCancelable(false)
                 .create();
         progress.show();
@@ -1118,18 +1054,15 @@ public class SetupActivity extends Activity {
             if (success) {
                 if (closeAfter) {
                     new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                            .setTitle(tr("Permissions Granted & ADB Closed", "İzinler Verildi ve ADB Kapatıldı"))
-                            .setMessage(tr(
-                                    "WRITE_SECURE_SETTINGS and all launcher permissions are now active, and ADB (port 5555) has been closed for your security.\n\n"
-                                    + "Tip: For maximum security, you can also select \u201cRevoke USB debugging authorizations\u201d in Developer Options.",
-                                    "WRITE_SECURE_SETTINGS ve tüm başlatıcı izinleri artık etkinleştirildi ve güvenliğiniz için ADB (port 5555) kapatıldı.\n\n"
-                                    + "İpucu: Maksimum güvenlik için Geliştirici Seçenekleri'nden \u201cUSB hata ayıklama yetkilerini kaldır\u201d seçeneğini de kullanabilirsiniz."))
-                            .setPositiveButton(tr("Continue", "Devam Et"), (d, w) -> next())
+                            .setTitle(tr("Permissions Granted & ADB Closed"))
+                            .setMessage((tr("WRITE_SECURE_SETTINGS and all launcher permissions are now active, and ADB (port 5555) has been closed for your security.\n\n")
+                                    + tr("Tip: For maximum security, you can also select \u201cRevoke USB debugging authorizations\u201d in Developer Options.")))
+                            .setPositiveButton(tr("Continue"), (d, w) -> next())
                             .setOnCancelListener(d -> next())
                             .show();
                 } else {
                     android.widget.Toast.makeText(this,
-                            tr("All permissions granted automatically!", "Tüm izinler otomatik olarak verildi!"),
+                            tr("All permissions granted automatically!"),
                             android.widget.Toast.LENGTH_SHORT).show();
                     next();
                 }
@@ -1137,12 +1070,10 @@ public class SetupActivity extends Activity {
                 permMode = 1;
                 show(5, 0);
                 new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                        .setTitle(tr("ADB Debugging Needed", "ADB Hata Ayıklama Gerekli"))
-                        .setMessage(tr(
-                                "Could not connect to local ADB on port 5555.\n\nPlease make sure USB Debugging / Network Debugging is turned ON in Developer Options, then try again — or choose Manual Setup.",
-                                "Port 5555 üzerinden yerel ADB'ye bağlanılamadı.\n\nLütfen Geliştirici Seçenekleri'nde USB / Ağ Hata Ayıklamanın AÇIK olduğundan emin olup tekrar deneyin veya Manuel Kurulum'u seçin."))
-                        .setPositiveButton(tr("OK", "Tamam"), null)
-                        .setNeutralButton(tr("Manual Setup", "Manuel Kurulum"), (d, w) -> {
+                        .setTitle(tr("ADB Debugging Needed"))
+                        .setMessage(tr("Could not connect to local ADB on port 5555.\n\nPlease make sure USB Debugging / Network Debugging is turned ON in Developer Options, then try again — or choose Manual Setup."))
+                        .setPositiveButton(tr("OK"), null)
+                        .setNeutralButton(tr("Manual Setup"), (d, w) -> {
                             permMode = 2;
                             show(5, 1);
                         })
@@ -1153,17 +1084,15 @@ public class SetupActivity extends Activity {
 
     /** Step right after permissions: let the user add remote buttons and assign 1x, 2x, 3x tap actions. */
     void buttonMapperSetup() {
-        title(tr("Button Mapper", "Düğme Eşleyici"));
-        TextView s = subtitle(tr(
-                "Map any button on your remote with Single Tap (1x), Double Tap (2x) and Triple Tap (3x) actions — open the Control Panel, Recent Apps Switcher, or any app.",
-                "Kumandanızdaki herhangi bir düğmeye Tek Basış (1x), Çift Basış (2x) ve Üçlü Basış (3x) eylemleri atayın — Denetim Paneli'ni, Son Uygulamalar Değiştiricisi'ni veya herhangi bir uygulamayı açın."));
+        title(tr("Button Mapper"));
+        TextView s = subtitle(tr("Map any button on your remote with Single Tap (1x), Double Tap (2x) and Triple Tap (3x) actions — open the Control Panel, Recent Apps Switcher, or any app."));
         ((LinearLayout.LayoutParams) s.getLayoutParams()).width = u(580);
         ((LinearLayout.LayoutParams) s.getLayoutParams()).bottomMargin = u(16);
 
         LinearLayout l = scrollableList();
         if (!ButtonMapper.isServiceEnabled(this)) {
-            option(l, tr("Enable Button Mapper in Accessibility…", "Erişilebilirlik'te Düğme Eşleyiciyi Etkinleştir…"),
-                    tr("Required so mapped buttons work over every app", "Eşlenen düğmelerin her uygulamanın üzerinde çalışması için gereklidir"),
+            option(l, tr("Enable Button Mapper in Accessibility…"),
+                    tr("Required so mapped buttons work over every app"),
                     false,
                     () -> {
                         Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
@@ -1173,8 +1102,8 @@ public class SetupActivity extends Activity {
                     });
         }
 
-        option(l, tr("+ Add New Button to Remap…", "+ Yeniden Eşlemek İçin Yeni Düğme Ekle…"),
-                tr("Assign Single Tap (1x), Double Tap (2x) & Triple Tap (3x) actions", "Tek Basış (1x), Çift Basış (2x) ve Üçlü Basış (3x) eylemleri atayın"),
+        option(l, tr("+ Add New Button to Remap…"),
+                tr("Assign Single Tap (1x), Double Tap (2x) & Triple Tap (3x) actions"),
                 false,
                 () -> ButtonMapper.showCaptureAndConfigureDialog(this, () -> show(index, 0)));
 
@@ -1186,8 +1115,8 @@ public class SetupActivity extends Activity {
                     () -> ButtonMapper.showConfigureKeyDialog(this, keyCode, () -> show(index, 0)));
         }
 
-        option(l, tr("Continue", "Devam Et"),
-                mappedKeys.isEmpty() ? tr("You can also configure buttons later in Settings", "Düğmeleri daha sonra Ayarlar'dan da yapılandırabilirsiniz") : null,
+        option(l, tr("Continue"),
+                mappedKeys.isEmpty() ? tr("You can also configure buttons later in Settings") : null,
                 false,
                 this::next);
         dots();
@@ -1218,11 +1147,10 @@ public class SetupActivity extends Activity {
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(u(64), u(64));
         clp.bottomMargin = u(18);
         page.addView(check, clp);
-        title(tr("You're All Set", "Her \u015eey Haz\u0131r"));
-        subtitle(tr("Change any of this later in Settings, from the gear in Control Center.",
-                "Bunlar\u0131 daha sonra Ayarlar'dan istedi\u011finiz zaman de\u011fi\u015ftirebilirsiniz."));
+        title(tr("You're All Set"));
+        subtitle(tr("Change any of this later in Settings, from the gear in Control Center."));
         LinearLayout l = list();
-        option(l, tr("Go to Home Screen", "Ana Ekrana Git"), null, false, () -> {
+        option(l, tr("Go to Home Screen"), null, false, () -> {
             getSharedPreferences("setup", MODE_PRIVATE).edit().putBoolean(K_DONE, true).putInt("cur_step", 0).apply();
             startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
             finish();

@@ -1,12 +1,8 @@
+param([switch]$TestOnTv, [switch]$ForkPackage)
+
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-if (-not $env:JAVA_HOME) {
-    $jdkCandidate = "C:\Users\asen4\AppData\Local\Programs\Microsoft\jdk-17.0.10.7-hotspot"
-    if (Test-Path $jdkCandidate) {
-        $env:JAVA_HOME = $jdkCandidate
-    }
-}
 if ($env:JAVA_HOME) {
     $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 }
@@ -21,12 +17,22 @@ New-Item -ItemType Directory -Force -Path "build\gen", "build\classes", "build\d
 & "$BT\aapt2.exe" compile --dir res -o build\res.zip
 if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
 
-& "$BT\aapt2.exe" link -o build\unsigned.apk -I "$JAR" --manifest AndroidManifest.xml `
+$packageFlags = @()
+if ($ForkPackage -or $TestOnTv) {
+    $packageFlags += @("--rename-manifest-package", "com.techgenius.tvoslauncher.fork")
+}
+if ($TestOnTv) {
+    $packageFlags += "--debug-mode"
+}
+& "$BT\aapt2.exe" link @packageFlags -o build\unsigned.apk -I "$JAR" --manifest AndroidManifest.xml `
     --java build\gen --min-sdk-version 24 --target-sdk-version 34 `
-    --version-code 15 --version-name "2.1.5" build\res.zip
+    --version-code 16 --version-name "2.1.6" build\res.zip
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
-$javaFiles = Get-ChildItem -Recurse -Path src, build\gen -Filter "*.java" | Select-Object -ExpandProperty FullName
+$sourceRoot = (Get-Location).Path
+$javaFiles = Get-ChildItem -Recurse -Path src, build\gen -Filter "*.java" | ForEach-Object {
+    '"{0}"' -f $_.FullName.Substring($sourceRoot.Length + 1).Replace('\', '/')
+}
 $javaFiles | Out-File -Encoding ascii build\sources.txt
 & javac -encoding UTF-8 --release 11 -classpath "$JAR" -d build\classes "@build\sources.txt"
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }

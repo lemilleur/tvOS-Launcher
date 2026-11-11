@@ -478,38 +478,38 @@ public final class ControlPanelOverlay {
             }, false));
         }
         if (isItemEnabled(c, ITEM_MEMORY)) {
-            capsules.add(new CapsuleSpec("memory", I18n.s(c, "Memory", "Bellek"), () -> memoryState(c), v -> {
+            capsules.add(new CapsuleSpec("memory", I18n.t(c, "Memory"), () -> memoryState(c), v -> {
                 dismissAll(c);
                 RecentAppsOverlay.show(c);
             }, true));
         }
         if (isItemEnabled(c, ITEM_DND)) {
-            capsules.add(new CapsuleSpec("moon", I18n.s(c, "Do Not Disturb", "Rahatsız Etmeyin"),
+            capsules.add(new CapsuleSpec("moon", I18n.t(c, "Do Not Disturb"),
                     () -> dndState(c), v -> toggleDnd(c), false));
         }
         if (isItemEnabled(c, ITEM_AUDIO)) {
-            capsules.add(new CapsuleSpec("audio", I18n.s(c, "Audio", "Ses"), () -> audioState(c), v -> {
+            capsules.add(new CapsuleSpec("audio", I18n.t(c, "Audio"), () -> audioState(c), v -> {
                 dismissAll(c);
                 openSoundSettings(c);
             }, false));
         }
         if (isItemEnabled(c, ITEM_TIMER)) {
-            capsules.add(new CapsuleSpec("timer", I18n.s(c, "Sleep Timer", "Uyku Zamanlayıcısı"),
+            capsules.add(new CapsuleSpec("timer", I18n.t(c, "Sleep Timer"),
                     () -> timerState(c), v -> cycleSleepTimer(c), false));
         }
         if (isItemEnabled(c, ITEM_AMBIENT)) {
             boolean lockMode = isAmbientLockScreenMode(c);
             capsules.add(new CapsuleSpec("ambient",
-                    lockMode ? I18n.s(c, "Lock Screen", "Kilit Ekranı") : I18n.s(c, "Ambient Mode", "Ortam Modu"),
-                    () -> lockMode ? I18n.s(c, "Lock Now", "Şimdi Kilitle") : I18n.s(c, "Screensaver", "Ekran Koruyucu"),
+                    lockMode ? I18n.t(c, "Lock Screen") : I18n.t(c, "Ambient Mode"),
+                    () -> lockMode ? I18n.t(c, "Lock Now") : I18n.t(c, "Screensaver"),
                     v -> {
                         dismissAll(c);
                         startAmbientMode(c);
                     }, false));
         }
         if (isItemEnabled(c, ITEM_POWER)) {
-            capsules.add(new CapsuleSpec("power", I18n.s(c, "Power Off", "Kapat"),
-                    () -> I18n.s(c, "Screen Off", "Ekranı Kapat"),
+            capsules.add(new CapsuleSpec("power", I18n.t(c, "Power Off"),
+                    () -> I18n.t(c, "Screen Off"),
                     v -> {
                         dismissAll(c);
                         SleepReceiver.sleepNow(c);
@@ -559,7 +559,7 @@ public final class ControlPanelOverlay {
                 ? (y4 + small)
                 : Math.max(0, capsuleRows * (cap + gap) - gap);
 
-        if (isItemEnabled(c, ITEM_WEATHER_PANEL)) {
+        if (isItemEnabled(c, ITEM_WEATHER_PANEL) && Weather.enabled(c)) {
             int yWeather = totalH > 0 ? (totalH + gap) : 0;
             int weatherH = dp(unit, 66);
             View weatherTile = makeWeatherPanelTile(c, panel, pad, pad + yWeather, w, weatherH, unit, screenW, screenH, glassSource);
@@ -597,7 +597,7 @@ public final class ControlPanelOverlay {
         bar.setBackground(idleBg);
         bar.setFocusable(true);
         bar.setClickable(true);
-        bar.setPadding(dp(unit, 14), dp(unit, 8), dp(unit, 14), dp(unit, 8));
+        bar.setPadding(dp(unit, 14), dp(unit, 6), dp(unit, 14), dp(unit, 6));
 
         // Left half: Current weather
         LinearLayout leftBox = new LinearLayout(c);
@@ -617,14 +617,25 @@ public final class ControlPanelOverlay {
         curTitleTv.setTypeface(Ui.font(c, "semibold"));
         curTitleTv.setTextColor(Color.WHITE);
         curTitleTv.setSingleLine(true);
+        curTitleTv.setIncludeFontPadding(false);
         curTitleTv.setEllipsize(TextUtils.TruncateAt.END);
         leftTexts.addView(curTitleTv);
+
+        final TextView curPlaceTv = new TextView(c);
+        Ui.textSize(curPlaceTv, 10f);
+        curPlaceTv.setTypeface(Ui.font(c, "regular"));
+        curPlaceTv.setTextColor(0xD9FFFFFF);
+        curPlaceTv.setSingleLine(true);
+        curPlaceTv.setIncludeFontPadding(false);
+        curPlaceTv.setEllipsize(TextUtils.TruncateAt.END);
+        leftTexts.addView(curPlaceTv);
 
         final TextView curSubTv = new TextView(c);
         Ui.textSize(curSubTv, 10f);
         curSubTv.setTypeface(Ui.font(c, "regular"));
         curSubTv.setTextColor(0xD9FFFFFF);
-        curSubTv.setSingleLine(true);
+        curSubTv.setMaxLines(2);
+        curSubTv.setIncludeFontPadding(false);
         curSubTv.setEllipsize(TextUtils.TruncateAt.END);
         leftTexts.addView(curSubTv);
 
@@ -657,6 +668,7 @@ public final class ControlPanelOverlay {
         tomTitleTv.setTypeface(Ui.font(c, "semibold"));
         tomTitleTv.setTextColor(Color.WHITE);
         tomTitleTv.setSingleLine(true);
+        tomTitleTv.setIncludeFontPadding(false);
         tomTitleTv.setEllipsize(TextUtils.TruncateAt.END);
         rightTexts.addView(tomTitleTv);
 
@@ -664,7 +676,8 @@ public final class ControlPanelOverlay {
         Ui.textSize(tomSubTv, 10f);
         tomSubTv.setTypeface(Ui.font(c, "regular"));
         tomSubTv.setTextColor(0xD9FFFFFF);
-        tomSubTv.setSingleLine(true);
+        tomSubTv.setMaxLines(2);
+        tomSubTv.setIncludeFontPadding(false);
         tomSubTv.setEllipsize(TextUtils.TruncateAt.END);
         rightTexts.addView(tomSubTv);
 
@@ -674,35 +687,34 @@ public final class ControlPanelOverlay {
         final Runnable bindWeatherData = () -> {
             Weather.Data d = Weather.cached(c);
             if (d == null) {
-                curIcon.setType(Weather.ICON_PARTLY);
+                curIcon.setConditions(-1, true);
                 curTitleTv.setText("--°");
-                curSubTv.setText(I18n.t(c, "weather_updating"));
-                tomIcon.setType(Weather.ICON_PARTLY);
+                curPlaceTv.setVisibility(View.GONE);
+                curSubTv.setText(Weather.status(c));
+                tomIcon.setConditions(-1, true);
                 tomTitleTv.setText(I18n.t(c, "tomorrow_short"));
                 tomSubTv.setText("--° / --°");
                 return;
             }
-            curIcon.setType(Weather.iconType(d.code));
-            String citySuffix = (d.place != null && !d.place.isEmpty()) ? (" · " + d.place) : "";
-            curTitleTv.setText(Weather.formatTemp(c, d.temp) + citySuffix);
-            curSubTv.setText(Weather.codeText(c, d.code));
+            curIcon.setConditions(d.code, d.day);
+            curTitleTv.setText(Weather.formatTemp(c, d.temp));
+            curPlaceTv.setText(d.place);
+            curPlaceTv.setVisibility(d.place.isEmpty() ? View.GONE : View.VISIBLE);
+            curSubTv.setText(Weather.describe(c, d.code, d.day));
 
-            if (d.days != null && d.days.size() > 1 && d.days.get(1) != null) {
-                Weather.Day tm = d.days.get(1);
-                tomIcon.setType(Weather.iconType(tm.code));
+            if (d.tomorrow != null) {
+                Weather.Day tm = d.tomorrow;
+                tomIcon.setConditions(tm.code, true);
                 tomTitleTv.setText(I18n.t(c, "tomorrow_short") + "  "
                         + Weather.formatTemp(c, tm.max) + "/" + Weather.formatTemp(c, tm.min));
                 tomSubTv.setText(Weather.codeText(c, tm.code));
             } else {
-                tomIcon.setType(Weather.iconType(d.code));
+                tomIcon.setConditions(-1, true);
                 tomTitleTv.setText(I18n.t(c, "tomorrow_short"));
-                tomSubTv.setText(Weather.codeText(c, d.code));
+                tomSubTv.setText("—");
             }
         };
-        bindWeatherData.run();
-        if (Weather.cached(c) == null) {
-            Weather.refresh(c, false, () -> MAIN.post(bindWeatherData));
-        }
+        Weather.bind(bar, bindWeatherData);
 
         final GradientDrawable whiteFocus = new GradientDrawable();
         whiteFocus.setCornerRadius(radius);
@@ -711,6 +723,7 @@ public final class ControlPanelOverlay {
         bar.setOnFocusChangeListener((v, has) -> {
             bar.setBackground(has ? whiteFocus : idleBg);
             curTitleTv.setTextColor(has ? 0xFF111114 : Color.WHITE);
+            curPlaceTv.setTextColor(has ? 0xB3111114 : 0xD9FFFFFF);
             curSubTv.setTextColor(has ? 0xB3111114 : 0xD9FFFFFF);
             tomTitleTv.setTextColor(has ? 0xFF111114 : Color.WHITE);
             tomSubTv.setTextColor(has ? 0xB3111114 : 0xD9FFFFFF);
@@ -747,6 +760,7 @@ public final class ControlPanelOverlay {
     }
 
     public static void openFiveDayWeather(Context c) {
+        if (!Weather.enabled(c)) return;
         if (MainActivity.activeInstance != null && MainActivity.activeInstance.resumed) {
             MainActivity.activeInstance.runOnUiThread(() -> MainActivity.activeInstance.showWeather());
             return;
@@ -763,6 +777,7 @@ public final class ControlPanelOverlay {
     }
 
     public static boolean showWeatherOverlay(final Context c) {
+        if (!Weather.enabled(c)) return false;
         dismiss();
         dismissWeatherOverlay();
         final Context hostCtx = PowerService.instance != null ? PowerService.instance
@@ -808,8 +823,7 @@ public final class ControlPanelOverlay {
         glass.setStroke(Math.max(1, dp(u, 1)), 0x38FFFFFF);
         panel.setBackground(glass);
         panel.setFocusable(true);
-        Weather.Data cached = Weather.cached(hostCtx);
-        if (cached != null) panel.setData(cached);
+        Weather.bind(panel, () -> panel.setData(Weather.cached(hostCtx)));
 
         FrameLayout.LayoutParams plp = new FrameLayout.LayoutParams(
                 dp(u, WeatherView.FULL_W), dp(u, WeatherView.FULL_H), Gravity.TOP | Gravity.END);
@@ -843,10 +857,6 @@ public final class ControlPanelOverlay {
             layer.animate().alpha(1f).setDuration(200).start();
             panel.animate().translationY(0).setDuration(260).setInterpolator(MainActivity.EASE).start();
             panel.requestFocus();
-            Weather.refresh(hostCtx, false, () -> MAIN.post(() -> {
-                Weather.Data nd = Weather.cached(hostCtx);
-                if (nd != null && panel.isAttachedToWindow()) panel.setData(nd);
-            }));
             return true;
         } catch (Exception e) {
             return false;
@@ -1014,15 +1024,15 @@ public final class ControlPanelOverlay {
         try {
             ConnectivityManager cm = c.getSystemService(ConnectivityManager.class);
             NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            if (nc == null) return I18n.s(c, "Not Connected", "Bağlı Değil");
+            if (nc == null) return I18n.t(c, "Not Connected");
             if (nc.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) return "Ethernet";
-            if (!nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return I18n.s(c, "Connected", "Bağlı");
+            if (!nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return I18n.t(c, "Connected");
             WifiManager wm = c.getApplicationContext().getSystemService(WifiManager.class);
             String ssid = wm.getConnectionInfo().getSSID();
-            if (ssid == null || ssid.contains("unknown ssid")) return I18n.s(c, "Connected", "Bağlı");
+            if (ssid == null || ssid.contains("unknown ssid")) return I18n.t(c, "Connected");
             return ssid.replace("\"", "");
         } catch (Exception e) {
-            return I18n.s(c, "Connected", "Bağlı");
+            return I18n.t(c, "Connected");
         }
     }
 
@@ -1040,17 +1050,17 @@ public final class ControlPanelOverlay {
             }
             BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
             if (ba != null) {
-                if (!ba.isEnabled()) return I18n.s(c, "Off", "Kapalı");
+                if (!ba.isEnabled()) return I18n.t(c, "Off");
                 try {
                     Set<BluetoothDevice> bonded = ba.getBondedDevices();
                     if (bonded != null && !bonded.isEmpty()) {
-                        return bonded.size() + I18n.s(c, " paired", " eşleşmiş");
+                        return bonded.size() + I18n.t(c, " paired");
                     }
                 } catch (SecurityException ignored) { }
-                return I18n.s(c, "On", "Açık");
+                return I18n.t(c, "On");
             }
         } catch (Exception ignored) { }
-        return I18n.s(c, "Settings", "Ayarlar");
+        return I18n.t(c, "Settings");
     }
 
     public static float memoryUsed(Context c) {
@@ -1061,7 +1071,7 @@ public final class ControlPanelOverlay {
     }
 
     public static String memoryState(Context c) {
-        return Math.round(memoryUsed(c) * 100) + I18n.s(c, "% used · Recent Apps", "% kullanımda · Son Uygulamalar");
+        return Math.round(memoryUsed(c) * 100) + I18n.t(c, "% used · Recent Apps");
     }
 
     private static void attachMemoryBar(Context c, View tile, float unit) {
@@ -1102,7 +1112,7 @@ public final class ControlPanelOverlay {
             if (!p.isEmpty() && Suggestions.installed(c, p)) apps.add(p);
         }
         if (apps.isEmpty()) {
-            Toast.makeText(c, I18n.s(c, "No apps to close", "Kapatılacak uygulama yok"), Toast.LENGTH_SHORT).show();
+            Toast.makeText(c, I18n.t(c, "No apps to close"), Toast.LENGTH_SHORT).show();
             return;
         }
         ActivityManager.MemoryInfo miBefore = new ActivityManager.MemoryInfo();
@@ -1119,9 +1129,7 @@ public final class ControlPanelOverlay {
             am.getMemoryInfo(miAfter);
             long freed = Math.max(0, miAfter.availMem - before) / (1024 * 1024);
             updateMemoryBar(c);
-            Toast.makeText(c, I18n.s(c,
-                    "Closed " + apps.size() + (apps.size() == 1 ? " app" : " apps") + (freed > 0 ? " · freed " + freed + " MB" : ""),
-                    apps.size() + " uygulama kapatıldı" + (freed > 0 ? " · " + freed + " MB boşaltıldı" : "")),
+            Toast.makeText(c, (I18n.t(c, "Closed ") + apps.size() + (apps.size() == 1 ? I18n.t(c, " app") : I18n.t(c, " apps")) + (freed > 0 ? I18n.t(c, " · freed ") + freed + I18n.t(c, " MB") : "")),
                     Toast.LENGTH_SHORT).show();
         }, 500);
     }
@@ -1129,7 +1137,7 @@ public final class ControlPanelOverlay {
     public static String dndState(Context c) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         return nm.getCurrentInterruptionFilter() > NotificationManager.INTERRUPTION_FILTER_ALL
-                ? I18n.s(c, "On", "Açık") : I18n.s(c, "Off", "Kapalı");
+                ? I18n.t(c, "On") : I18n.t(c, "Off");
     }
 
     public static void toggleDnd(Context c) {
@@ -1161,12 +1169,12 @@ public final class ControlPanelOverlay {
                     break;
             }
         }
-        return I18n.s(c, "TV Speakers", "TV Hoparlörü");
+        return I18n.t(c, "TV Speakers");
     }
 
     public static String timerState(Context c) {
         int left = SleepReceiver.timerLeft(c);
-        return left > 0 ? left + I18n.s(c, " min left", " dk kaldı") : I18n.s(c, "Off", "Kapalı");
+        return left > 0 ? left + I18n.t(c, " min left") : I18n.t(c, "Off");
     }
 
     public static void cycleSleepTimer(Context c) {
@@ -1266,7 +1274,7 @@ public final class ControlPanelOverlay {
     public static String getItemTitle(Context c, String itemKey) {
         for (String[] row : ALL_CP_ITEMS) {
             if (row[0].equals(itemKey)) {
-                return I18n.s(c, row[1], row[2]);
+                return I18n.t(c, row[1]);
             }
         }
         return itemKey;
@@ -1316,11 +1324,11 @@ public final class ControlPanelOverlay {
 
     public static String getActionSummary(Context c, String key) {
         if (ACTION_AMBIENT.equals(key) && isAmbientLockScreenMode(c)) {
-            return I18n.s(c, "Lock Screen", "Kilit Ekranı");
+            return I18n.t(c, "Lock Screen");
         }
         String pkg = getCustomPkg(c, key);
         if (pkg == null || pkg.isEmpty()) {
-            return I18n.s(c, "Default (Automatic)", "Varsayılan (Otomatik)");
+            return I18n.t(c, "Default (Automatic)");
         }
         String label = cpPrefs(c).getString(key + "_label", "");
         if (label != null && !label.isEmpty()) return label;
@@ -1480,9 +1488,8 @@ public final class ControlPanelOverlay {
                 svc,
                 u,
                 "sliders",
-                I18n.s(svc, "Home settings", "Ana ekran ayarları"),
-                I18n.s(svc, "Language, weather, scenes, apps and people",
-                        "Dil, hava durumu, sahneler, uygulamalar ve kişiler"),
+                I18n.t(svc, "Home settings"),
+                I18n.t(svc, "Language, weather, scenes, apps and people"),
                 () -> {
                     closeSheet.run();
                     startExternal(svc, new Intent(svc, SettingsActivity.class));
@@ -1494,9 +1501,8 @@ public final class ControlPanelOverlay {
                 svc,
                 u,
                 "gear",
-                I18n.s(svc, "TV settings", "TV ayarları"),
-                I18n.s(svc, "Wi-Fi, picture, sound and the rest of the TV",
-                        "Wi-Fi, görüntü, ses ve diğer TV ayarları"),
+                I18n.t(svc, "TV settings"),
+                I18n.t(svc, "Wi-Fi, picture, sound and the rest of the TV"),
                 () -> {
                     closeSheet.run();
                     startExternal(svc, new Intent(Settings.ACTION_SETTINGS));
@@ -1507,19 +1513,19 @@ public final class ControlPanelOverlay {
         card.addView(btnTvSettings, tvlp);
         rows.add(btnTvSettings);
 
-        if (CustomMedia.isRedditWallpaperActiveOnCurrentLook(svc)) {
+        if (CustomMedia.isOnlineWallpaperActiveOnCurrentLook(svc)) {
             View btnNextWall = makeOverlayGearOptionRow(
                     svc,
                     u,
                     "refresh",
-                    I18n.s(svc, "Next wallpaper", "Sonraki duvar kağıdı"),
-                    I18n.s(svc, "Skip to the next Reddit wallpaper", "Sonraki Reddit duvar kağıdına geç"),
+                    I18n.t(svc, "Next wallpaper"),
+                    I18n.t(svc, "Skip to the next online wallpaper"),
                     () -> {
                         closeSheet.run();
                         Toast.makeText(svc,
-                                I18n.s(svc, "Loading next Reddit wallpaper…", "Sonraki Reddit duvar kağıdı yükleniyor…"),
+                                I18n.t(svc, "Loading next wallpaper…"),
                                 Toast.LENGTH_SHORT).show();
-                        CustomMedia.skipToNextRedditWallpaperOnCurrentLook(svc, null);
+                        CustomMedia.skipToNextOnlineWallpaperOnCurrentLook(svc, null);
                     });
             LinearLayout.LayoutParams nwlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1731,7 +1737,7 @@ public final class ControlPanelOverlay {
             list.add(makeFallbackInput("com.droidlogic.tvinput/.services.Hdmi2InputService/HW6", "HDMI 2", android.media.tv.TvInputInfo.TYPE_HDMI));
             list.add(makeFallbackInput("com.droidlogic.tvinput/.services.Hdmi3InputService/HW7", "HDMI 3", android.media.tv.TvInputInfo.TYPE_HDMI));
             list.add(makeFallbackInput("com.droidlogic.tvinput/.services.Hdmi4InputService/HW8", "HDMI 4", android.media.tv.TvInputInfo.TYPE_HDMI));
-            list.add(makeFallbackInput("tv_channels", I18n.s(hostCtx, "Channels", "Kanallar"), android.media.tv.TvInputInfo.TYPE_TUNER));
+            list.add(makeFallbackInput("tv_channels", I18n.t(hostCtx, "Channels"), android.media.tv.TvInputInfo.TYPE_TUNER));
             list.add(makeFallbackInput("com.droidlogic.tvinput/.services.Av1InputService/HW1", "AV", android.media.tv.TvInputInfo.TYPE_COMPOSITE));
         }
 
@@ -1748,7 +1754,7 @@ public final class ControlPanelOverlay {
         title.setTypeface(Ui.font(hostCtx, "semibold"));
         title.setTextColor(0xBFFFFFFF);
         title.setShadowLayer(dp(u, 8), 0, dp(u, 2), 0xB3000000);
-        title.setText(I18n.s(hostCtx, "Inputs", "Girişler"));
+        title.setText(I18n.t(hostCtx, "Inputs"));
         panel.addView(title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(u, 20)));
 
         MainActivity.LiquidGlass.Backdrop glassSrc = (isBlurryBgMode(hostCtx)
@@ -1762,7 +1768,7 @@ public final class ControlPanelOverlay {
             final Inputs.Input in = list.get(i);
             int x = (i % 2) * (col + gap);
             int y = top + (i / 2) * (cap + gap);
-            Status st = in.disconnected ? () -> I18n.s(hostCtx, "Not connected", "Bağlı değil") : null;
+            Status st = in.disconnected ? () -> I18n.t(hostCtx, "Not connected") : null;
             View tile = makeTile(
                     hostCtx, panel, x, y, col, cap, u, screenW, screenH, glassSrc,
                     Inputs.glyph(in), in.label, st, v -> {
